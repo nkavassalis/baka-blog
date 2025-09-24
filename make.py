@@ -115,7 +115,7 @@ def main():
         render_templates(posts, config)
         copy_static_assets()
         copy_content_images()
-#        sync_s3_and_invalidate(config)
+        sync_s3_and_invalidate(config)
         save_hashes(current_hashes)
         print("Site rebuilt and deployed.")
     else:

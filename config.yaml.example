@@ -7,6 +7,8 @@ website:
     <a href='mailto:nick@baka.jp'>email</a>
   footer: |
     (c) Nick Kavassalis <script>document.write(new Date().getFullYear())</script>
+  posts_per_page: 10
+
 aws:
   s3_bucket: "your-bucket-name"
   cloudfront_dist_id: "your-distribution-id"
