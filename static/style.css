@@ -32,6 +32,7 @@ html, body {
     background-attachment: var(--bg-attach);
     background-repeat: var(--bg-repeat);
     background-size: var(--bg-size);
+    background-position: center;
 }
 
 a {
