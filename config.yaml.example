@@ -1,0 +1,13 @@
+website:
+  title: "baka.jp"
+  subtitle: |
+    <a href='https://root.wtf'>bio</a>
+    <a href='https://baka.jp'>blog</a>
+    <a href='https://bsky.app/profile/nkavassalis.bsky.social'>social</a>
+    <a href='mailto:nick@baka.jp'>email</a>
+  footer: |
+    (c) Nick Kavassalis <script>document.write(new Date().getFullYear())</script>
+aws:
+  s3_bucket: "your-bucket-name"
+  cloudfront_dist_id: "your-distribution-id"
+

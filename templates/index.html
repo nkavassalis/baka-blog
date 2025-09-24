@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ config.website.title }}</title>
+    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+<header>
+    <img src="images/logo.png" alt="{{ config.website.title }}" class="logo">
+    <p class="subtitle">{{ config.website.subtitle }}</p>
+</header>
+<main>
+    <ul class="post-list">
+    {% for post in posts %}
+        <li>
+            <div class="post-info">
+                <a href="posts/{{ post.slug }}.html">{{ post.meta.title }}</a>
+                {% if post.meta.subtitle %}
+                    <p class="post-subtitle">{{ post.meta.subtitle }}</p>
+                {% endif %}
+            </div>
+            <span class="date">{{ post.meta.date_readable }}</span>
+        </li>
+    {% endfor %}
+    </ul>
+
+    <div class="pagination">
+        {% if current_page > 1 %}
+            <a href="{{ 'index.html' if current_page - 1 == 1 else 'page' + (current_page - 1)|string + '.html' }}" class="prev">Previous</a>
+        {% endif %}
+        
+        <span class="page-number">Page {{ current_page }} of {{ total_pages }}</span>
+        
+        {% if current_page < total_pages %}
+            <a href="page{{ current_page + 1 }}.html" class="next">Next</a>
+        {% endif %}
+    </div>
+</main>
+<footer>{{ config.website.footer }}</footer>
+<footer><a href="https://github.com/nkavassalis/baka-blog">Powered by baka blog</a></footer>
+</body>
+</html>

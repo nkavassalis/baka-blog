@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ post.meta.title }} - {{ config.website.title }}</title>
+    <link rel="stylesheet" href="../style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+<header>
+    <img src="../images/logo.png" alt="{{ config.website.title }}" class="logo">
+    <p class="subtitle">{{ config.website.subtitle }}</p>
+</header>
+<main>
+    <article class="content"> <a href="../index.html">← Back to all posts</a>
+        <h1>{{ post.meta.title }}</h1>
+    <p class="date">{{ post.meta.date_readable }}</p>
+        {{ post.content | safe }}</article>
+    <a href="../index.html">← Back to all posts</a>
+</main>
+<footer>{{ config.website.footer }}</footer>
+<footer><a href="https://github.com/nkavassalis/baka-blog">Powered by baka blog</a></footer>
+</body>
+</html>
+
