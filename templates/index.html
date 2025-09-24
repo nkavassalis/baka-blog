@@ -16,7 +16,7 @@
     {% for post in posts %}
         <li>
             <div class="post-info">
-                <a href="posts/{{ post.slug }}.html">{{ post.meta.title }}</a>
+                <a href="posts/{{ post.uuid }}.html">{{ post.meta.title }}</a>
                 {% if post.meta.subtitle %}
                     <p class="post-subtitle">{{ post.meta.subtitle }}</p>
                 {% endif %}
