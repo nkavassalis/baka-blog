@@ -1,3 +1,4 @@
+import uuid
 import math
 import hashlib
 import json
@@ -10,6 +11,7 @@ from datetime import datetime
 
 CONFIG_PATH = "config.yaml"
 HASHES_PATH = ".file_hashes.json"
+MAPPING_PATH = ".slug_uuid_mapping.json"
 CONTENT_DIR = Path("content/posts")
 CONTENT_IMG_DIR = Path("content/images")
 IMAGE_DIR = Path("static/images")
@@ -34,17 +36,47 @@ def save_hashes(hashes):
     with open(HASHES_PATH, 'w') as f:
         json.dump(hashes, f, indent=2)
 
+def load_slug_uuid_mapping():
+    if Path(MAPPING_PATH).exists():
+        with open(MAPPING_PATH) as f:
+            return json.load(f)
+    return {}
+
+def save_slug_uuid_mapping(mapping):
+    with open(MAPPING_PATH, 'w') as f:
+        json.dump(mapping, f, indent=2)
+
 def build_content():
     posts = []
     md = markdown.Markdown(extensions=['meta'])
+    slug_uuid_mapping = load_slug_uuid_mapping()
+
+    mapping_changed = False
+
     for md_file in CONTENT_DIR.glob("*.md"):
         html = md.convert(md_file.read_text())
         metadata = {k: v[0] for k, v in md.Meta.items()}
         slug = md_file.stem
+
+        if slug not in slug_uuid_mapping:
+            slug_uuid_mapping[slug] = uuid.uuid4().hex
+            mapping_changed = True
+
         date_obj = datetime.strptime(metadata['date'], "%Y-%m-%d")
         metadata['date_readable'] = date_obj.strftime("%B %d, %Y")
-        posts.append({"content": html, "meta": metadata, "slug": slug})
+
+        posts.append({
+            "content": html,
+            "meta": metadata,
+            "slug": slug,
+            "uuid": slug_uuid_mapping[slug]
+        })
+
+    if mapping_changed:
+        save_slug_uuid_mapping(slug_uuid_mapping)
+
     return sorted(posts, key=lambda x: x['meta']['date'], reverse=True)
+
 
 def render_templates(posts, config):
     env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
@@ -73,7 +105,7 @@ def render_templates(posts, config):
     posts_dir = OUTPUT_DIR / "posts"
     posts_dir.mkdir(exist_ok=True)
     for post in posts:
-        post_file = posts_dir / f"{post['slug']}.html"
+        post_file = posts_dir / f"{post['uuid']}.html"
         post_file.write_text(post_template.render(post=post, config=config))
 
 
