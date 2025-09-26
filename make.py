@@ -8,6 +8,7 @@ import yaml
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 from datetime import datetime
+from xml.sax.saxutils import escape
 
 CONFIG_PATH = "config.yaml"
 HASHES_PATH = ".file_hashes.json"
@@ -108,6 +109,7 @@ def render_templates(posts, config):
         post_file = posts_dir / f"{post['uuid']}.html"
         post_file.write_text(post_template.render(post=post, config=config))
 
+    generate_rss_feed(posts, OUTPUT_DIR, config)
 
 def copy_static_assets():
     assets_dir = OUTPUT_DIR / "images"
@@ -128,6 +130,40 @@ def sync_s3_and_invalidate(config):
     subprocess.run(["aws", "s3", "sync", str(OUTPUT_DIR), f"s3://{bucket}", "--acl", "public-read"], check=True)
     subprocess.run(["aws", "cloudfront", "create-invalidation", "--distribution-id", dist_id, "--paths", "/*"], check=True)
     print("Upload complete and CloudFront invalidated.")
+
+def generate_rss_feed(posts, output_dir, config, feed_size=25):
+    rss_items = []
+    feed_posts = posts[:feed_size]
+    base_url = config["website"]["base_url"]
+    feed_url = f"{base_url}/feed.xml"
+
+    for post in feed_posts:
+        guid_url = f"{base_url}/posts/{post['uuid']}.html"
+        title_text = escape(post['meta']['title'])
+        description_text = escape(post['meta'].get('description', title_text))
+
+        rss_items.append(f"""
+        <item>
+            <title>{title_text}</title>
+            <link>{guid_url}</link>
+            <description>{description_text}</description>
+            <pubDate>{datetime.strptime(post['meta']['date'], '%Y-%m-%d').strftime('%a, %d %b %Y 00:00:00 GMT')}</pubDate>
+            <guid>{guid_url}</guid>
+        </item>""")
+
+    rss_feed = f"""<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>{escape(config["website"]["title"])}</title>
+    <link>{base_url}</link>
+    <atom:link href="{feed_url}" rel="self" type="application/rss+xml" />
+    <description>{escape(config["website"]["description"])}</description>
+    {''.join(rss_items)}
+  </channel>
+</rss>"""
+
+    (output_dir / "feed.xml").write_text(rss_feed, encoding="utf-8")
+
 
 def main():
     config = load_config()
