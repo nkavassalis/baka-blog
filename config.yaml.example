@@ -1,6 +1,7 @@
 website:
   title: "baka.jp"
   description: "Nick's blog."
+  base_url: "https://baka.jp"
   subtitle: |
     <a href='https://root.wtf'>bio</a>
     <a href='https://photog.jp'>gallery</a>
