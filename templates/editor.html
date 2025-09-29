@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Baka Blog</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+  <script src="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.js"></script>
+  <style>
+    body { display: flex; height: 100vh; margin: 0; font-family: sans-serif; background: #1e1e1e; color: #ddd; }
+    #sidebar { width: 250px; background: #2d2d2d; padding: 10px; overflow-y: auto; }
+    #sidebar button { width: 100%; }
+    #main { flex: 1; display: flex; flex-direction: column; }
+    #editor { flex: 1; }
+    #actions { padding: 10px; background: #2d2d2d; }
+    #preview { flex: 1; overflow-y: auto; padding: 10px; background: #1a1a1a; border-top: 1px solid #333; }
+    #messages { height: 150px; overflow-y: auto; background: #111; color: #ddd; font-family: monospace; padding: 5px; }
+    button { margin: 5px 0; padding: 6px 10px; background: #444; color: #fff; border: none; cursor: pointer; }
+    button:hover { background: #666; }
+    li { margin: 5px 0; cursor: pointer; }
+    li:hover { text-decoration: underline; }
+    .inline { display: inline-block; margin-right: 10px; }
+    label { font-size: 0.9em; margin-left: 5px; }
+    .stdout { color: #0f0; }   /* green */
+    .stderr { color: #f55; }   /* red */
+    .status { color: #ff0; }   /* yellow */
+  </style>
+</head>
+<body>
+  <div id="sidebar">
+    <button onclick="newPost()">+ New Post</button>
+    <ul id="postList"></ul>
+  </div>
+  <div id="main">
+    <textarea id="editor"></textarea>
+    <div id="actions">
+      <input type="file" id="imageUpload" class="inline">
+      <input type="checkbox" id="insertAtEnd" class="inline" checked>
+      <label for="insertAtEnd">Insert images at end</label>
+      <br>
+      <button onclick="savePost()">Save</button>
+      <button onclick="deletePost()">Delete</button>
+      <button onclick="regenerate()">Regenerate Site</button>
+    </div>
+    <div id="preview"></div>
+    <div id="messages"></div>
+  </div>
+
+<script>
+let currentFile = null;
+const editor = new SimpleMDE({
+  element: document.getElementById("editor"),
+  renderingConfig: { singleLineBreaks: false }
+});
+
+// force dark theme for CodeMirror
+editor.codemirror.setOption("theme", "dracula");
+
+// logging with colors
+function logMessage(msg, type="status") {
+  const box = document.getElementById("messages");
+  const div = document.createElement("div");
+  div.className = type;
+  div.innerHTML = msg.replace(/\n/g, "<br>");
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function loadPosts() {
+  fetch("/api/posts").then(r => r.json()).then(posts => {
+    const ul = document.getElementById("postList");
+    ul.innerHTML = "";
+    posts.forEach(p => {
+      const li = document.createElement("li");
+      li.textContent = p.title + (p.date ? " (" + p.date + ")" : "");
+      li.onclick = () => loadPost(p.filename);
+      ul.appendChild(li);
+    });
+  });
+}
+
+function loadPost(filename) {
+  fetch("/api/post/" + filename).then(r => r.json()).then(data => {
+    currentFile = filename;
+    editor.value(data.content);
+    updatePreview();
+    logMessage("Loaded " + filename, "status");
+  });
+}
+
+function savePost() {
+  if (!currentFile) { logMessage("No post loaded.", "stderr"); return; }
+  fetch("/api/post/" + currentFile, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content: editor.value() })
+  }).then(() => { logMessage("Saved " + currentFile, "status"); loadPosts(); });
+}
+
+function deletePost() {
+  if (!currentFile) { logMessage("No post loaded.", "stderr"); return; }
+  if (!confirm("Delete this post?")) return;
+  fetch("/api/delete/" + currentFile, { method: "DELETE" })
+    .then(() => { logMessage("Deleted " + currentFile, "status"); currentFile = null; editor.value(""); loadPosts(); });
+}
+
+function newPost() {
+  const title = prompt("Enter post title:");
+  if (!title) return;
+  fetch("/api/new", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title })
+  }).then(r => r.json()).then(res => {
+    currentFile = res.filename;
+    loadPosts();
+    loadPost(currentFile);
+    logMessage("Created new post " + res.filename, "status");
+  });
+}
+
+document.getElementById("imageUpload").addEventListener("change", function() {
+  const formData = new FormData();
+  formData.append("file", this.files[0]);
+  fetch("/api/upload_image", { method: "POST", body: formData })
+    .then(r => r.json()).then(res => {
+      const markdown = `![${res.filename}](${res.path})`;
+      const cm = editor.codemirror;
+
+      if (document.getElementById("insertAtEnd").checked) {
+        cm.setCursor(cm.lineCount(), 0); // append at end
+        cm.replaceSelection("\n" + markdown + "\n");
+      } else {
+        cm.replaceSelection(markdown); // insert at cursor
+      }
+
+      updatePreview();
+      logMessage("Uploaded " + res.filename, "status");
+    });
+});
+
+function updatePreview() {
+  let content = editor.value();
+  if (content.startsWith("---")) {
+    const parts = content.split("---");
+    if (parts.length >= 3) content = parts.slice(2).join("---");
+  }
+  document.getElementById("preview").innerHTML = editor.options.previewRender(content);
+}
+
+editor.codemirror.on("change", updatePreview);
+
+function regenerate() {
+  logMessage("Regenerating site...", "status");
+  fetch("/api/regenerate", { method: "POST" })
+    .then(r => r.json()).then(res => {
+      if (res.stdout) logMessage("STDOUT:\n" + res.stdout, "stdout");
+      if (res.stderr) logMessage("STDERR:\n" + res.stderr, "stderr");
+      logMessage("Done (exit code " + res.returncode + ")", "status");
+    }).catch(err => logMessage("Error: " + err, "stderr"));
+}
+
+loadPosts();
+</script>
+</body>
+</html>
+
