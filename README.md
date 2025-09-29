@@ -1,4 +1,4 @@
-A simple markdown to static site generator blog. Supports S3 and CloudFront for hosting. Shared for folks who may want a very light weight website.
+A simple markdown to static site generator blog, with a locally hosted editor. Supports S3 and CloudFront for hosting. Shared for folks who may want a very light weight website.
 
 --- 
 
