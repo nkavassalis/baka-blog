@@ -84,14 +84,15 @@ def render_templates(posts, config):
     OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
     POSTS_PER_PAGE = config['website']['posts_per_page']
 
-    total_pages = math.ceil(len(posts) / POSTS_PER_PAGE)
+    listed_posts = [p for p in posts if p['meta'].get('unlisted', '').lower() != 'true']
+
+    total_pages = math.ceil(len(listed_posts) / POSTS_PER_PAGE)
 
     index_template = env.get_template("index.html")
     for page_num in range(1, total_pages + 1):
         start_idx = (page_num - 1) * POSTS_PER_PAGE
         end_idx = start_idx + POSTS_PER_PAGE
-        paginated_posts = posts[start_idx:end_idx]
-
+        paginated_posts = listed_posts[start_idx:end_idx]
         page_filename = "index.html" if page_num == 1 else f"page{page_num}.html"
         (OUTPUT_DIR / page_filename).write_text(
             index_template.render(
@@ -101,6 +102,7 @@ def render_templates(posts, config):
                 total_pages=total_pages
             )
         )
+
 
     post_template = env.get_template("post.html")
     posts_dir = OUTPUT_DIR / "posts"
@@ -133,7 +135,7 @@ def sync_s3_and_invalidate(config):
 
 def generate_rss_feed(posts, output_dir, config, feed_size=25):
     rss_items = []
-    feed_posts = posts[:feed_size]
+    feed_posts = [p for p in posts if p['meta'].get('unlisted', '').lower() != 'true'][:feed_size]
     base_url = config["website"]["base_url"]
     feed_url = f"{base_url}/feed.xml"
 
