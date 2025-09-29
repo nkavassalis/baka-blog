@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Baka Blog</title>
+  <title>baka-blog</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
   <script src="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.js"></script>
@@ -21,9 +21,9 @@
     li:hover { text-decoration: underline; }
     .inline { display: inline-block; margin-right: 10px; }
     label { font-size: 0.9em; margin-left: 5px; }
-    .stdout { color: #0f0; }   /* green */
-    .stderr { color: #f55; }   /* red */
-    .status { color: #ff0; }   /* yellow */
+    .stdout { color: #0f0; }
+    .stderr { color: #f55; }
+    .status { color: #ff0; }
   </style>
 </head>
 <body>
@@ -41,6 +41,7 @@
       <button onclick="savePost()">Save</button>
       <button onclick="deletePost()">Delete</button>
       <button onclick="regenerate()">Regenerate Site</button>
+      <button onclick="clearLogs()">Clear Logs</button>
     </div>
     <div id="preview"></div>
     <div id="messages"></div>
@@ -53,7 +54,7 @@ const editor = new SimpleMDE({
   renderingConfig: { singleLineBreaks: false }
 });
 
-// force dark theme for CodeMirror
+// force dark theme
 editor.codemirror.setOption("theme", "dracula");
 
 // logging with colors
@@ -64,6 +65,10 @@ function logMessage(msg, type="status") {
   div.innerHTML = msg.replace(/\n/g, "<br>");
   box.appendChild(div);
   box.scrollTop = box.scrollHeight;
+}
+
+function clearLogs() {
+  document.getElementById("messages").innerHTML = "";
 }
 
 function loadPosts() {

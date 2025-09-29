@@ -16,3 +16,6 @@ aws:
   s3_bucket: "your-bucket-name"
   cloudfront_dist_id: "your-distribution-id"
 
+editor:
+  host: 127.0.0.1
+  port: 5000

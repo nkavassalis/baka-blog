@@ -4,6 +4,18 @@ import yaml
 from datetime import datetime
 import subprocess
 
+CONFIG_PATH = Path("config.yaml")
+
+# Load config.yaml
+if CONFIG_PATH.exists():
+    with open(CONFIG_PATH) as f:
+        CONFIG = yaml.safe_load(f)
+else:
+    CONFIG = {}
+
+EDITOR_HOST = CONFIG.get("editor", {}).get("host", "127.0.0.1")
+EDITOR_PORT = CONFIG.get("editor", {}).get("port", 5000)
+
 app = Flask(__name__)
 
 POSTS_DIR = Path("content/posts")
@@ -24,7 +36,7 @@ def list_posts():
             except Exception:
                 pass
         date_str = metadata.get("date", "")
-        # Normalize to YYYY-MM-DD
+        
         try:
             date_obj = datetime.strptime(str(date_str).strip(), "%Y-%m-%d")
             date_str = date_obj.strftime("%Y-%m-%d")
@@ -128,5 +140,6 @@ def serve_image(filename):
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    print(f"Starting editor on {EDITOR_HOST}:{EDITOR_PORT}")
+    app.run(debug=True, host=EDITOR_HOST, port=EDITOR_PORT)
 
