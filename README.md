@@ -33,7 +33,7 @@ to launch the post editor service
 
 surf to http://localhost:5000
 
-Do not expose the editor to the internet.
+Do not expose the editor to the internet. Deleting files using the editor will not delete / remove them from S3.
 
 ---
 
