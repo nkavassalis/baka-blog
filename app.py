@@ -5,6 +5,7 @@ from datetime import datetime
 import subprocess
 from PIL import Image
 import io
+import uuid
 
 CONFIG_PATH = Path("config.yaml")
 
@@ -112,7 +113,8 @@ Write your content here.
 @app.route("/api/upload_image", methods=["POST"])
 def api_upload_image():
     file = request.files["file"]
-    save_path = IMAGES_DIR / file.filename
+    unique_name = f"{uuid.uuid4().hex}.jpg"
+    save_path = IMAGES_DIR / unique_name
 
     img = Image.open(file.stream)
     img = img.convert("RGB")  # ensure compatible with JPEG
