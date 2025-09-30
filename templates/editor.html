@@ -12,9 +12,10 @@
     #editor { flex: 1; }
     #actions { padding: 10px; background: #2d2d2d; }
     #preview { flex: 1; overflow-y: auto; padding: 10px; background: #1a1a1a; border-top: 1px solid #333; }
-    #sidebar { width: 250px; flex: 0 0 250px; background: #2d2d2d; padding: 10px; overflow-y: auto; }
+    #sidebar { width: 300px; flex: 0 0 300px; background: #2d2d2d; display: flex; flex-direction: column; }
+    #postContainer { flex: 2; overflow-y: auto; padding: 10px; }
+    #messages { flex: 1; overflow-y: auto; background: #111; color: #ddd; font-family: monospace; padding: 5px; border-top: 1px solid #333; }
     #preview img { max-width: 100%; height: auto; display: block; margin: 0 auto; }
-    #messages { height: 150px; overflow-y: auto; background: #111; color: #ddd; font-family: monospace; padding: 5px; }
     button { margin: 5px 0; padding: 6px 10px; background: #444; color: #fff; border: none; cursor: pointer; }
     button:hover { background: #666; }
     li { margin: 5px 0; cursor: pointer; }
@@ -24,7 +25,7 @@
     .stdout { color: #0f0; }
     .stderr { color: #f55; }
     .status { color: #ff0; }
-    #imagePanel { background: #222; padding: 10px; border-top: 1px solid #333; overflow-y: auto; max-height: 250px; }
+    #imagePanel { display: none; background: #222; padding: 10px; border-top: 1px solid #333; overflow-y: auto; max-height: 250px; }
     .thumb { display: inline-block; margin: 5px; text-align: center; }
     .thumb img { max-width: 100px; max-height: 100px; display: block; margin-bottom: 5px; }
     .thumb button { background: #a33; }
@@ -33,8 +34,11 @@
 </head>
 <body>
   <div id="sidebar">
-    <button onclick="newPost()">+ New Post</button>
-    <ul id="postList"></ul>
+    <div id="postContainer">
+      <button onclick="newPost()">+ New Post</button>
+      <ul id="postList"></ul>
+    </div>
+    <div id="messages"></div>
   </div>
   <div id="main">
     <textarea id="editor"></textarea>
@@ -47,16 +51,17 @@
       <button onclick="deletePost()">Delete</button>
       <button onclick="regenerate()">Regenerate Site</button>
       <button onclick="clearLogs()">Clear Logs</button>
-      <button onclick="loadImages()">Manage Images</button>
+      <button onclick="toggleImages()">Manage Images</button>
     </div>
     <div id="preview"></div>
     <div id="imagePanel"></div>
-    <div id="messages"></div>
   </div>
 
 <script>
 let currentFile = null
 let currentSlug = null
+let imagePanelVisible = false
+
 const editor = new SimpleMDE({
   element: document.getElementById("editor"),
   renderingConfig: { singleLineBreaks: false }
@@ -96,6 +101,7 @@ function loadPost(filename, slug) {
     editor.value(data.content)
     updatePreview()
     logMessage("Loaded " + filename, "status")
+    hideImages()
   })
 }
 
@@ -112,7 +118,14 @@ function deletePost() {
   if (!currentFile) { logMessage("No post loaded.", "stderr"); return }
   if (!confirm("Delete this post?")) return
   fetch("/api/delete/" + currentFile, { method: "DELETE" })
-    .then(() => { logMessage("Deleted " + currentFile, "status"); currentFile = null; currentSlug = null; editor.value(""); loadPosts(); document.getElementById("imagePanel").innerHTML = "" })
+    .then(() => { 
+      logMessage("Deleted " + currentFile, "status")
+      currentFile = null
+      currentSlug = null
+      editor.value("")
+      loadPosts()
+      hideImages()
+    })
 }
 
 function newPost() {
@@ -147,32 +160,52 @@ document.getElementById("imageUpload").addEventListener("change", function() {
       }
       updatePreview()
       logMessage("Uploaded " + res.filename, "status")
-      loadImages()
+      if (imagePanelVisible) loadImages()
     })
 })
+
+function toggleImages() {
+  if (imagePanelVisible) {
+    hideImages()
+  } else {
+    loadImages()
+  }
+}
+
+function hideImages() {
+  document.getElementById("imagePanel").style.display = "none"
+  document.getElementById("imagePanel").innerHTML = ""
+  imagePanelVisible = false
+}
 
 function loadImages() {
   if (!currentSlug) return
   fetch("/api/images/" + currentSlug).then(r => r.json()).then(images => {
     const panel = document.getElementById("imagePanel")
     panel.innerHTML = ""
-    images.forEach(img => {
-      const div = document.createElement("div")
-      div.className = "thumb"
-      const image = document.createElement("img")
-      image.src = img.url
-      const btn = document.createElement("button")
-      btn.textContent = "Delete"
-      btn.onclick = () => {
-        if (!confirm("Delete this image?")) return
-        fetch("/api/delete_image/" + currentSlug + "/" + img.filename, { method: "DELETE" })
-          .then(() => { logMessage("Deleted " + img.filename, "status"); loadImages() })
-      }
-      div.appendChild(image)
-      div.appendChild(document.createTextNode(img.filename))
-      div.appendChild(btn)
-      panel.appendChild(div)
-    })
+    if (images.length === 0) {
+      panel.innerHTML = "<p>No images uploaded for this post.</p>"
+    } else {
+      images.forEach(img => {
+        const div = document.createElement("div")
+        div.className = "thumb"
+        const image = document.createElement("img")
+        image.src = img.url
+        const btn = document.createElement("button")
+        btn.textContent = "Delete"
+        btn.onclick = () => {
+          if (!confirm("Delete this image?")) return
+          fetch("/api/delete_image/" + currentSlug + "/" + img.filename, { method: "DELETE" })
+            .then(() => { logMessage("Deleted " + img.filename, "status"); loadImages() })
+        }
+        div.appendChild(image)
+        div.appendChild(document.createTextNode(img.filename))
+        div.appendChild(btn)
+        panel.appendChild(div)
+      })
+    }
+    panel.style.display = "block"
+    imagePanelVisible = true
   })
 }
 
