@@ -1,4 +1,3 @@
-import uuid
 import math
 import hashlib
 import json
@@ -12,7 +11,6 @@ from xml.sax.saxutils import escape
 
 CONFIG_PATH = "config.yaml"
 HASHES_PATH = ".file_hashes.json"
-MAPPING_PATH = ".slug_uuid_mapping.json"
 CONTENT_DIR = Path("content/posts")
 CONTENT_IMG_DIR = Path("content/images")
 IMAGE_DIR = Path("static/images")
@@ -37,47 +35,21 @@ def save_hashes(hashes):
     with open(HASHES_PATH, 'w') as f:
         json.dump(hashes, f, indent=2)
 
-def load_slug_uuid_mapping():
-    if Path(MAPPING_PATH).exists():
-        with open(MAPPING_PATH) as f:
-            return json.load(f)
-    return {}
-
-def save_slug_uuid_mapping(mapping):
-    with open(MAPPING_PATH, 'w') as f:
-        json.dump(mapping, f, indent=2)
-
 def build_content():
     posts = []
     md = markdown.Markdown(extensions=['meta'])
-    slug_uuid_mapping = load_slug_uuid_mapping()
-
-    mapping_changed = False
-
     for md_file in CONTENT_DIR.glob("*.md"):
         html = md.convert(md_file.read_text())
         metadata = {k: v[0] for k, v in md.Meta.items()}
         slug = md_file.stem
-
-        if slug not in slug_uuid_mapping:
-            slug_uuid_mapping[slug] = uuid.uuid4().hex
-            mapping_changed = True
-
         date_obj = datetime.strptime(metadata['date'], "%Y-%m-%d")
         metadata['date_readable'] = date_obj.strftime("%B %d, %Y")
-
         posts.append({
             "content": html,
             "meta": metadata,
-            "slug": slug,
-            "uuid": slug_uuid_mapping[slug]
+            "slug": slug
         })
-
-    if mapping_changed:
-        save_slug_uuid_mapping(slug_uuid_mapping)
-
     return sorted(posts, key=lambda x: x['meta']['date'], reverse=True)
-
 
 def render_templates(posts, config):
     env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
@@ -85,7 +57,6 @@ def render_templates(posts, config):
     POSTS_PER_PAGE = config['website']['posts_per_page']
 
     listed_posts = [p for p in posts if p['meta'].get('unlisted', '').lower() != 'true']
-
     total_pages = math.ceil(len(listed_posts) / POSTS_PER_PAGE)
 
     index_template = env.get_template("index.html")
@@ -103,12 +74,11 @@ def render_templates(posts, config):
             )
         )
 
-
     post_template = env.get_template("post.html")
     posts_dir = OUTPUT_DIR / "posts"
     posts_dir.mkdir(exist_ok=True)
     for post in posts:
-        post_file = posts_dir / f"{post['uuid']}.html"
+        post_file = posts_dir / f"{post['slug']}.html"
         post_file.write_text(post_template.render(post=post, config=config))
 
     generate_rss_feed(posts, OUTPUT_DIR, config)
@@ -123,8 +93,11 @@ def copy_static_assets():
 def copy_content_images():
     output_images_dir = OUTPUT_DIR / "images"
     output_images_dir.mkdir(exist_ok=True, parents=True)
-    for image in CONTENT_IMG_DIR.glob("*.*"):
-        (output_images_dir / image.name).write_bytes(image.read_bytes())
+    for image in CONTENT_IMG_DIR.glob("*/*.*"):
+        relative_path = image.relative_to(CONTENT_IMG_DIR)
+        target_dir = output_images_dir / relative_path.parent
+        target_dir.mkdir(parents=True, exist_ok=True)
+        (target_dir / image.name).write_bytes(image.read_bytes())
 
 def sync_s3_and_invalidate(config):
     bucket = config['aws']['s3_bucket']
@@ -140,10 +113,9 @@ def generate_rss_feed(posts, output_dir, config, feed_size=25):
     feed_url = f"{base_url}/feed.xml"
 
     for post in feed_posts:
-        guid_url = f"{base_url}/posts/{post['uuid']}.html"
+        guid_url = f"{base_url}/posts/{post['slug']}.html"
         title_text = escape(post['meta']['title'])
         description_text = escape(post['meta'].get('description', title_text))
-
         rss_items.append(f"""
         <item>
             <title>{title_text}</title>
@@ -163,23 +135,19 @@ def generate_rss_feed(posts, output_dir, config, feed_size=25):
     {''.join(rss_items)}
   </channel>
 </rss>"""
-
     (output_dir / "feed.xml").write_text(rss_feed, encoding="utf-8")
-
 
 def main():
     config = load_config()
     hashes = load_hashes()
-
     current_hashes = {
         "index_template": compute_hash(TEMPLATE_DIR / "index.html"),
         "post_template": compute_hash(TEMPLATE_DIR / "post.html"),
         "style": compute_hash(Path("static/style.css")),
         **{str(p): compute_hash(p) for p in CONTENT_DIR.glob("*.md")},
         **{str(p): compute_hash(p) for p in IMAGE_DIR.glob("*.*")},
-        **{str(p): compute_hash(p) for p in CONTENT_IMG_DIR.glob("*.*")}
+        **{str(p): compute_hash(p) for p in CONTENT_IMG_DIR.glob("*/*.*")}
     }
-
     if hashes != current_hashes:
         posts = build_content()
         render_templates(posts, config)
