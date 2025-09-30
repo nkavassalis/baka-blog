@@ -24,6 +24,11 @@
     .stdout { color: #0f0; }
     .stderr { color: #f55; }
     .status { color: #ff0; }
+    #imagePanel { background: #222; padding: 10px; border-top: 1px solid #333; overflow-y: auto; max-height: 250px; }
+    .thumb { display: inline-block; margin: 5px; text-align: center; }
+    .thumb img { max-width: 100px; max-height: 100px; display: block; margin-bottom: 5px; }
+    .thumb button { background: #a33; }
+    .thumb button:hover { background: #c55; }
   </style>
 </head>
 <body>
@@ -42,130 +47,157 @@
       <button onclick="deletePost()">Delete</button>
       <button onclick="regenerate()">Regenerate Site</button>
       <button onclick="clearLogs()">Clear Logs</button>
+      <button onclick="loadImages()">Manage Images</button>
     </div>
     <div id="preview"></div>
+    <div id="imagePanel"></div>
     <div id="messages"></div>
   </div>
 
 <script>
-let currentFile = null;
+let currentFile = null
+let currentSlug = null
 const editor = new SimpleMDE({
   element: document.getElementById("editor"),
   renderingConfig: { singleLineBreaks: false }
-});
+})
+editor.codemirror.setOption("theme", "dracula")
 
-// force dark theme
-editor.codemirror.setOption("theme", "dracula");
-
-// logging with colors
 function logMessage(msg, type="status") {
-  const box = document.getElementById("messages");
-  const div = document.createElement("div");
-  div.className = type;
-  div.innerHTML = msg.replace(/\n/g, "<br>");
-  box.appendChild(div);
-  box.scrollTop = box.scrollHeight;
+  const box = document.getElementById("messages")
+  const div = document.createElement("div")
+  div.className = type
+  div.innerHTML = msg.replace(/\n/g, "<br>")
+  box.appendChild(div)
+  box.scrollTop = box.scrollHeight
 }
 
 function clearLogs() {
-  document.getElementById("messages").innerHTML = "";
+  document.getElementById("messages").innerHTML = ""
 }
 
 function loadPosts() {
   fetch("/api/posts").then(r => r.json()).then(posts => {
-    const ul = document.getElementById("postList");
-    ul.innerHTML = "";
+    const ul = document.getElementById("postList")
+    ul.innerHTML = ""
     posts.forEach(p => {
-      const li = document.createElement("li");
-      li.textContent = p.title + (p.date ? " (" + p.date + ")" : "");
-      li.onclick = () => loadPost(p.filename);
-      ul.appendChild(li);
-    });
-  });
+      const li = document.createElement("li")
+      li.textContent = p.title + (p.date ? " (" + p.date + ")" : "")
+      li.onclick = () => loadPost(p.filename, p.slug)
+      ul.appendChild(li)
+    })
+  })
 }
 
-function loadPost(filename) {
+function loadPost(filename, slug) {
   fetch("/api/post/" + filename).then(r => r.json()).then(data => {
-    currentFile = filename;
-    editor.value(data.content);
-    updatePreview();
-    logMessage("Loaded " + filename, "status");
-  });
+    currentFile = filename
+    currentSlug = slug
+    editor.value(data.content)
+    updatePreview()
+    logMessage("Loaded " + filename, "status")
+  })
 }
 
 function savePost() {
-  if (!currentFile) { logMessage("No post loaded.", "stderr"); return; }
+  if (!currentFile) { logMessage("No post loaded.", "stderr"); return }
   fetch("/api/post/" + currentFile, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ content: editor.value() })
-  }).then(() => { logMessage("Saved " + currentFile, "status"); loadPosts(); });
+  }).then(() => { logMessage("Saved " + currentFile, "status"); loadPosts() })
 }
 
 function deletePost() {
-  if (!currentFile) { logMessage("No post loaded.", "stderr"); return; }
-  if (!confirm("Delete this post?")) return;
+  if (!currentFile) { logMessage("No post loaded.", "stderr"); return }
+  if (!confirm("Delete this post?")) return
   fetch("/api/delete/" + currentFile, { method: "DELETE" })
-    .then(() => { logMessage("Deleted " + currentFile, "status"); currentFile = null; editor.value(""); loadPosts(); });
+    .then(() => { logMessage("Deleted " + currentFile, "status"); currentFile = null; currentSlug = null; editor.value(""); loadPosts(); document.getElementById("imagePanel").innerHTML = "" })
 }
 
 function newPost() {
-  const title = prompt("Enter post title:");
-  if (!title) return;
+  const title = prompt("Enter post title:")
+  if (!title) return
   fetch("/api/new", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ title })
   }).then(r => r.json()).then(res => {
-    currentFile = res.filename;
-    loadPosts();
-    loadPost(currentFile);
-    logMessage("Created new post " + res.filename, "status");
-  });
+    currentFile = res.filename
+    currentSlug = res.slug
+    loadPosts()
+    loadPost(currentFile, currentSlug)
+    logMessage("Created new post " + res.filename, "status")
+  })
 }
 
 document.getElementById("imageUpload").addEventListener("change", function() {
-  const formData = new FormData();
-  formData.append("file", this.files[0]);
-  fetch("/api/upload_image", { method: "POST", body: formData })
+  if (!currentSlug) { logMessage("No post loaded.", "stderr"); return }
+  const formData = new FormData()
+  formData.append("file", this.files[0])
+  fetch("/api/upload_image/" + currentSlug, { method: "POST", body: formData })
     .then(r => r.json()).then(res => {
-      const markdown = `![${res.filename}](${res.path})`;
-      const cm = editor.codemirror;
-
+      const markdown = `![${res.filename}](${res.path})`
+      const cm = editor.codemirror
       if (document.getElementById("insertAtEnd").checked) {
-        cm.setCursor(cm.lineCount(), 0); // append at end
-        cm.replaceSelection("\n" + markdown + "\n");
+        cm.setCursor(cm.lineCount(), 0)
+        cm.replaceSelection("\n" + markdown + "\n")
       } else {
-        cm.replaceSelection(markdown); // insert at cursor
+        cm.replaceSelection(markdown)
       }
+      updatePreview()
+      logMessage("Uploaded " + res.filename, "status")
+      loadImages()
+    })
+})
 
-      updatePreview();
-      logMessage("Uploaded " + res.filename, "status");
-    });
-});
+function loadImages() {
+  if (!currentSlug) return
+  fetch("/api/images/" + currentSlug).then(r => r.json()).then(images => {
+    const panel = document.getElementById("imagePanel")
+    panel.innerHTML = ""
+    images.forEach(img => {
+      const div = document.createElement("div")
+      div.className = "thumb"
+      const image = document.createElement("img")
+      image.src = img.url
+      const btn = document.createElement("button")
+      btn.textContent = "Delete"
+      btn.onclick = () => {
+        if (!confirm("Delete this image?")) return
+        fetch("/api/delete_image/" + currentSlug + "/" + img.filename, { method: "DELETE" })
+          .then(() => { logMessage("Deleted " + img.filename, "status"); loadImages() })
+      }
+      div.appendChild(image)
+      div.appendChild(document.createTextNode(img.filename))
+      div.appendChild(btn)
+      panel.appendChild(div)
+    })
+  })
+}
 
 function updatePreview() {
-  let content = editor.value();
+  let content = editor.value()
   if (content.startsWith("---")) {
-    const parts = content.split("---");
-    if (parts.length >= 3) content = parts.slice(2).join("---");
+    const parts = content.split("---")
+    if (parts.length >= 3) content = parts.slice(2).join("---")
   }
-  document.getElementById("preview").innerHTML = editor.options.previewRender(content);
+  document.getElementById("preview").innerHTML = editor.options.previewRender(content)
 }
 
-editor.codemirror.on("change", updatePreview);
+editor.codemirror.on("change", updatePreview)
 
 function regenerate() {
-  logMessage("Regenerating site...", "status");
+  logMessage("Regenerating site...", "status")
   fetch("/api/regenerate", { method: "POST" })
     .then(r => r.json()).then(res => {
-      if (res.stdout) logMessage("STDOUT:\n" + res.stdout, "stdout");
-      if (res.stderr) logMessage("STDERR:\n" + res.stderr, "stderr");
-      logMessage("Done (exit code " + res.returncode + ")", "status");
-    }).catch(err => logMessage("Error: " + err, "stderr"));
+      if (res.stdout) logMessage("STDOUT:\n" + res.stdout, "stdout")
+      if (res.stderr) logMessage("STDERR:\n" + res.stderr, "stderr")
+      logMessage("Done (exit code " + res.returncode + ")", "status")
+    }).catch(err => logMessage("Error: " + err, "stderr"))
 }
 
-loadPosts();
+loadPosts()
 </script>
 </body>
 </html>
