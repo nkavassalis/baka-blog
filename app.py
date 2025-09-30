@@ -27,7 +27,7 @@ IMAGES_DIR.mkdir(parents=True, exist_ok=True)
 
 MAX_WIDTH = CONFIG.get("images", {}).get("max_width", 1280)
 MAX_HEIGHT = CONFIG.get("images", {}).get("max_height", 1280)
-JPEG_QUALITY = CONFIG.get("images", {}).get("jpeg_quality", 60)
+JPEG_QUALITY = CONFIG.get("images", {}).get("jpeg_quality", 80)
 
 def list_posts():
     posts = []

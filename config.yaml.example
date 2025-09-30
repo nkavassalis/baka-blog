@@ -23,4 +23,4 @@ editor:
 images:
   max_width: 1280
   max_height: 1280
-  jpeg_quality: 60
+  jpeg_quality: 80
