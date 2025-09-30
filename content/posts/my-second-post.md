@@ -8,5 +8,5 @@ Here's another post with more great content.
 
 You can add images easily:
 
-![Sample Image](../images/sample2.jpg)
+![Sample Image](../images/my-second-post/sample2.jpg)
 
