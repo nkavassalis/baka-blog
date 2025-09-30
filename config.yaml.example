@@ -19,3 +19,8 @@ aws:
 editor:
   host: 127.0.0.1
   port: 5000
+
+images:
+  max_width: 1280
+  max_height: 1280
+  jpeg_quality: 60

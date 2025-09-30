@@ -3,6 +3,8 @@ from pathlib import Path
 import yaml
 from datetime import datetime
 import subprocess
+from PIL import Image
+import io
 
 CONFIG_PATH = Path("config.yaml")
 
@@ -23,6 +25,9 @@ IMAGES_DIR = Path("content/images")
 POSTS_DIR.mkdir(parents=True, exist_ok=True)
 IMAGES_DIR.mkdir(parents=True, exist_ok=True)
 
+MAX_WIDTH = CONFIG.get("images", {}).get("max_width", 1280)
+MAX_HEIGHT = CONFIG.get("images", {}).get("max_height", 1280)
+JPEG_QUALITY = CONFIG.get("images", {}).get("jpeg_quality", 60)
 
 def list_posts():
     posts = []
@@ -108,11 +113,19 @@ Write your content here.
 def api_upload_image():
     file = request.files["file"]
     save_path = IMAGES_DIR / file.filename
-    file.save(save_path)
+
+    img = Image.open(file.stream)
+    img = img.convert("RGB")  # ensure compatible with JPEG
+
+    img.thumbnail((MAX_WIDTH, MAX_HEIGHT), Image.LANCZOS)
+
+    save_path = save_path.with_suffix(".jpg")
+    img.save(save_path, "JPEG", quality=JPEG_QUALITY, optimize=True)
+
     return jsonify({
         "status": "uploaded",
-        "path": f"../images/{file.filename}",
-        "filename": file.filename
+        "path": f"../images/{save_path.name}",
+        "filename": save_path.name
     })
 
 
