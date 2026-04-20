@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>404 - {{ config.website.title }}</title>
+    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        .notfound {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1rem 3rem;
+            text-align: center;
+        }
+        .notfound canvas {
+            display: block;
+            width: 100%;
+            max-width: 600px;
+            height: 300px;
+            border-radius: 5px;
+        }
+        .notfound p {
+            font-size: 1.1rem;
+            color: var(--color-fg-alt-transparent);
+            margin-top: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+<header>
+    <img src="images/logo.png" alt="{{ config.website.title }}" class="logo">
+    <p class="subtitle">{{ config.website.subtitle }}</p>
+</header>
+<main>
+    <div class="notfound">
+        <canvas id="notFoundCanvas" width="600" height="300"></canvas>
+        <p>The page you're looking for can't be found. <a href="index.html">Back to home</a>.</p>
+    </div>
+</main>
+<footer>{{ config.website.footer }}</footer>
+<footer><a href="https://github.com/nkavassalis/baka-blog">Powered by baka blog</a></footer>
+
+<script>
+    (function () {
+        const canvas = document.getElementById('notFoundCanvas');
+        const ctx = canvas.getContext('2d');
+        const text = '404';
+        const scale = 3;
+        let width, height, dynamicFontSize, time = 0;
+
+        function resize() {
+            const rect = canvas.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            width = rect.width;
+            height = rect.height;
+            dynamicFontSize = Math.min(width, height) / 2.2;
+        }
+
+        window.addEventListener('resize', resize);
+
+        function drawTextRipple() {
+            ctx.clearRect(0, 0, width, height);
+            const off = document.createElement('canvas');
+            const offCtx = off.getContext('2d');
+            off.width = Math.max(1, Math.floor(width / scale));
+            off.height = Math.max(1, Math.floor(height / scale));
+
+            offCtx.font = `bold ${dynamicFontSize / scale}px Arial`;
+            offCtx.textAlign = 'center';
+            offCtx.textBaseline = 'middle';
+
+            offCtx.strokeStyle = '#000000';
+            offCtx.lineWidth = 4;
+            offCtx.strokeText(text, off.width / 2, off.height / 2);
+
+            offCtx.fillStyle = '#FFFFFF';
+            offCtx.fillText(text, off.width / 2, off.height / 2);
+
+            const imageData = offCtx.getImageData(0, 0, off.width, off.height);
+            const data = imageData.data;
+
+            for (let y = 0; y < off.height; y++) {
+                for (let x = 0; x < off.width; x++) {
+                    const index = (y * off.width + x) * 4;
+                    const a = data[index + 3];
+                    if (a > 0) {
+                        const r = data[index];
+                        const g = data[index + 1];
+                        const b = data[index + 2];
+                        const distortionX = x + Math.sin(y * 0.1 + time) * 5;
+                        const distortionY = y + Math.cos(x * 0.1 + time) * 5;
+                        ctx.fillStyle = `rgba(${r},${g},${b},${a / 255})`;
+                        ctx.fillRect(distortionX * scale, distortionY * scale, scale, scale);
+                    }
+                }
+            }
+        }
+
+        function animate() {
+            time += 0.02;
+            drawTextRipple();
+            requestAnimationFrame(animate);
+        }
+
+        resize();
+        animate();
+    })();
+</script>
+</body>
+</html>

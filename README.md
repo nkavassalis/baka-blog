@@ -25,6 +25,10 @@ make all
 ```
 to clean the locally generated files and re-upload the site to S3 / wipe CF
 
+```bash
+make setup
+```
+one-time hosting configuration: points the S3 bucket's website index/error documents at `index.html` / `404.html`, and adds CloudFront custom error responses mapping both 403 and 404 to `/404.html`. Idempotent — safe to re-run; it only triggers a CloudFront update when the rules have drifted.
 
 ```bash
 python app.py

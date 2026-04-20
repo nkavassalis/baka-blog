@@ -2,6 +2,8 @@ import math
 import hashlib
 import json
 import subprocess
+import sys
+import tempfile
 import markdown
 import yaml
 from pathlib import Path
@@ -81,6 +83,9 @@ def render_templates(posts, config):
         post_file = posts_dir / f"{post['slug']}.html"
         post_file.write_text(post_template.render(post=post, config=config))
 
+    not_found_template = env.get_template("404.html")
+    (OUTPUT_DIR / "404.html").write_text(not_found_template.render(config=config))
+
     generate_rss_feed(posts, OUTPUT_DIR, config)
 
 def copy_static_assets():
@@ -98,6 +103,69 @@ def copy_content_images():
         target_dir = output_images_dir / relative_path.parent
         target_dir.mkdir(parents=True, exist_ok=True)
         (target_dir / image.name).write_bytes(image.read_bytes())
+
+def setup_hosting(config):
+    bucket = config['aws']['s3_bucket']
+    dist_id = config['aws']['cloudfront_dist_id']
+
+    print(f"Configuring S3 website on s3://{bucket} (index.html / 404.html)...")
+    subprocess.run([
+        "aws", "s3", "website", f"s3://{bucket}",
+        "--index-document", "index.html",
+        "--error-document", "404.html",
+    ], check=True)
+
+    print(f"Configuring CloudFront custom error response on {dist_id}...")
+    result = subprocess.run(
+        ["aws", "cloudfront", "get-distribution-config", "--id", dist_id],
+        check=True, capture_output=True, text=True,
+    )
+    payload = json.loads(result.stdout)
+    etag = payload["ETag"]
+    dist_config = payload["DistributionConfig"]
+
+    desired_rules = [
+        {
+            "ErrorCode": code,
+            "ResponsePagePath": "/404.html",
+            "ResponseCode": "404",
+            "ErrorCachingMinTTL": 10,
+        }
+        for code in (403, 404)
+    ]
+
+    errors = dist_config.setdefault("CustomErrorResponses", {"Quantity": 0, "Items": []})
+    items = errors.get("Items", []) or []
+
+    changed = False
+    for desired in desired_rules:
+        existing = next((i for i in items if i.get("ErrorCode") == desired["ErrorCode"]), None)
+        if existing and all(existing.get(k) == v for k, v in desired.items()):
+            continue
+        if existing:
+            existing.update(desired)
+        else:
+            items.append(desired)
+        changed = True
+
+    if not changed:
+        print("CloudFront already has the desired 403/404 rules; skipping update.")
+        return
+
+    errors["Items"] = items
+    errors["Quantity"] = len(items)
+
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+        json.dump(dist_config, f)
+        cfg_path = f.name
+
+    subprocess.run([
+        "aws", "cloudfront", "update-distribution",
+        "--id", dist_id,
+        "--if-match", etag,
+        "--distribution-config", f"file://{cfg_path}",
+    ], check=True)
+    print("CloudFront distribution updated. Propagation may take several minutes.")
 
 def sync_s3_and_invalidate(config):
     bucket = config['aws']['s3_bucket']
@@ -143,6 +211,7 @@ def main():
     current_hashes = {
         "index_template": compute_hash(TEMPLATE_DIR / "index.html"),
         "post_template": compute_hash(TEMPLATE_DIR / "post.html"),
+        "not_found_template": compute_hash(TEMPLATE_DIR / "404.html"),
         "style": compute_hash(Path("static/style.css")),
         **{str(p): compute_hash(p) for p in CONTENT_DIR.glob("*.md")},
         **{str(p): compute_hash(p) for p in IMAGE_DIR.glob("*.*")},
@@ -160,5 +229,8 @@ def main():
         print("No changes detected; skipping build.")
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) > 1 and sys.argv[1] == "setup":
+        setup_hosting(load_config())
+    else:
+        main()
 
