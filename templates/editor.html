@@ -61,12 +61,38 @@
 let currentFile = null
 let currentSlug = null
 let imagePanelVisible = false
+let savedContent = ""
 
 const editor = new SimpleMDE({
   element: document.getElementById("editor"),
   renderingConfig: { singleLineBreaks: false }
 })
 editor.codemirror.setOption("theme", "dracula")
+
+function isDirty() {
+  return currentFile != null && editor.value() !== savedContent
+}
+
+function confirmDiscard() {
+  if (!isDirty()) return true
+  return confirm("Are you sure you want to leave this post without saving? Changes will be lost.")
+}
+
+function getCurrentTitle() {
+  const c = editor.value()
+  if (!c.startsWith("---")) return null
+  const end = c.indexOf("---", 3)
+  if (end < 0) return null
+  const m = c.slice(3, end).match(/^title:\s*(.+)$/m)
+  return m ? m[1].trim() : null
+}
+
+window.addEventListener("beforeunload", (e) => {
+  if (isDirty()) {
+    e.preventDefault()
+    e.returnValue = ""
+  }
+})
 
 function logMessage(msg, type="status") {
   const box = document.getElementById("messages")
@@ -88,7 +114,11 @@ function loadPosts() {
     posts.forEach(p => {
       const li = document.createElement("li")
       li.textContent = p.title + (p.date ? " (" + p.date + ")" : "")
-      li.onclick = () => loadPost(p.filename, p.slug)
+      li.onclick = () => {
+        if (p.filename === currentFile) { loadPost(p.filename, p.slug); return }
+        if (!confirmDiscard()) return
+        loadPost(p.filename, p.slug)
+      }
       ul.appendChild(li)
     })
   })
@@ -99,6 +129,7 @@ function loadPost(filename, slug) {
     currentFile = filename
     currentSlug = slug
     editor.value(data.content)
+    savedContent = data.content
     updatePreview()
     logMessage("Loaded " + filename, "status")
     hideImages()
@@ -107,28 +138,36 @@ function loadPost(filename, slug) {
 
 function savePost() {
   if (!currentFile) { logMessage("No post loaded.", "stderr"); return }
+  const content = editor.value()
   fetch("/api/post/" + currentFile, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ content: editor.value() })
-  }).then(() => { logMessage("Saved " + currentFile, "status"); loadPosts() })
+    body: JSON.stringify({ content })
+  }).then(() => {
+    savedContent = content
+    logMessage("Saved " + currentFile, "status")
+    loadPosts()
+  })
 }
 
 function deletePost() {
   if (!currentFile) { logMessage("No post loaded.", "stderr"); return }
-  if (!confirm("Delete this post?")) return
+  const label = getCurrentTitle() || currentFile
+  if (!confirm(`Delete "${label}"? This cannot be undone.`)) return
   fetch("/api/delete/" + currentFile, { method: "DELETE" })
-    .then(() => { 
+    .then(() => {
       logMessage("Deleted " + currentFile, "status")
       currentFile = null
       currentSlug = null
       editor.value("")
+      savedContent = ""
       loadPosts()
       hideImages()
     })
 }
 
 function newPost() {
+  if (!confirmDiscard()) return
   const title = prompt("Enter post title:")
   if (!title) return
   fetch("/api/new", {
