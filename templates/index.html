@@ -13,13 +13,6 @@
     <p class="subtitle">{{ config.website.subtitle }}</p>
 </header>
 <main>
-    {% if tag_cloud %}
-    <p class="tag-cloud" aria-label="Tags">
-        <span class="tag-cloud-label">Tags:</span>
-        {% for tag in tag_cloud %}<a href="{{ path_prefix }}tags/{{ tag.slug }}.html" class="tag">{{ tag.name }}<span class="tag-count">{{ tag.count }}</span></a>{% if not loop.last %} {% endif %}{% endfor %}
-    </p>
-    {% endif %}
-
     <h2 class="section-heading">All posts</h2>
 
     <ul class="post-list">
@@ -40,13 +33,20 @@
         {% if current_page > 1 %}
             <a href="{{ 'index.html' if current_page - 1 == 1 else 'page' + (current_page - 1)|string + '.html' }}" class="prev">Previous</a>
         {% endif %}
-        
+
         <span class="page-number">Page {{ current_page }} of {{ total_pages }}</span>
-        
+
         {% if current_page < total_pages %}
             <a href="page{{ current_page + 1 }}.html" class="next">Next</a>
         {% endif %}
     </div>
+
+    {% if tag_cloud %}
+    <p class="tag-cloud" aria-label="Tags">
+        <span class="tag-cloud-label">Tags:</span>
+        {% for tag in tag_cloud %}<a href="{{ path_prefix }}tags/{{ tag.slug }}.html" class="tag">{{ tag.name }}<span class="tag-count">{{ tag.count }}</span></a>{% if not loop.last %} {% endif %}{% endfor %}
+    </p>
+    {% endif %}
 </main>
 <footer>{{ config.website.footer }}</footer>
 <footer><a href="https://github.com/nkavassalis/baka-blog">Powered by baka blog</a></footer>

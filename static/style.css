@@ -190,11 +190,11 @@ pre {
 }
 
 .tag-cloud {
-    margin: 0.5rem 0 1rem;
-    padding: 0 0 1rem;
+    margin: 1.5rem 0 0.5rem;
+    padding: 1rem 0 0;
     font-size: 0.9rem;
     line-height: 1.6;
-    border-bottom: 1px solid var(--color-border-main);
+    border-top: 1px solid var(--color-border-main);
 }
 
 .tag-cloud-label {
@@ -249,10 +249,6 @@ pre {
     color: var(--color-fg-alt-transparent);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-}
-
-.back-link {
-    margin-top: 1.5rem;
 }
 
 .post-nav {

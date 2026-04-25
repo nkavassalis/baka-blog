@@ -13,7 +13,7 @@
     <p class="subtitle">{{ config.website.subtitle }}</p>
 </header>
 <main>
-    <p class="back-link"><a href="{{ path_prefix }}index.html">← Back to all posts</a></p>
+    <a href="{{ path_prefix }}index.html">← Back to all posts</a>
 
     <h2 class="section-heading">Posts tagged &ldquo;{{ tag.name }}&rdquo;</h2>
 
@@ -31,7 +31,7 @@
     {% endfor %}
     </ul>
 
-    <p class="back-link"><a href="{{ path_prefix }}index.html">← Back to all posts</a></p>
+    <a href="{{ path_prefix }}index.html">← Back to all posts</a>
 </main>
 <footer>{{ config.website.footer }}</footer>
 <footer><a href="https://github.com/nkavassalis/baka-blog">Powered by baka blog</a></footer>
