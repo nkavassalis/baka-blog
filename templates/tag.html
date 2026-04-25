@@ -13,12 +13,7 @@
     <p class="subtitle">{{ config.website.subtitle }}</p>
 </header>
 <main>
-    {% if tag_cloud %}
-    <p class="tag-cloud" aria-label="Tags">
-        <span class="tag-cloud-label">Tags:</span>
-        {% for t in tag_cloud %}<a href="{{ path_prefix }}tags/{{ t.slug }}.html" class="tag{% if t.slug == tag.slug %} tag-active{% endif %}">{{ t.name }}<span class="tag-count">{{ t.count }}</span></a>{% if not loop.last %} {% endif %}{% endfor %}
-    </p>
-    {% endif %}
+    <p class="back-link"><a href="{{ path_prefix }}index.html">← Back to all posts</a></p>
 
     <h2 class="section-heading">Posts tagged &ldquo;{{ tag.name }}&rdquo;</h2>
 
@@ -29,13 +24,6 @@
                 <a href="{{ path_prefix }}posts/{{ post.slug }}.html">{{ post.meta.title }}</a>
                 {% if post.meta.subtitle %}
                     <p class="post-subtitle">{{ post.meta.subtitle }}</p>
-                {% endif %}
-                {% if post.tags %}
-                    <p class="post-tags">
-                        {% for t in post.tags %}
-                            <a href="{{ path_prefix }}tags/{{ t.slug }}.html" class="tag-chip">{{ t.name }}</a>
-                        {% endfor %}
-                    </p>
                 {% endif %}
             </div>
             <span class="date">{{ post.meta.date_readable }}</span>
