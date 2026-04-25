@@ -13,6 +13,16 @@
     <p class="subtitle">{{ config.website.subtitle }}</p>
 </header>
 <main>
+    {% if tag_cloud %}
+    <nav class="tag-cloud" aria-label="Tags">
+        {% for tag in tag_cloud %}
+            <a href="{{ path_prefix }}tags/{{ tag.slug }}.html" class="tag tag-level-{{ tag.level }}">
+                {{ tag.name }}<span class="tag-count">{{ tag.count }}</span>
+            </a>
+        {% endfor %}
+    </nav>
+    {% endif %}
+
     <ul class="post-list">
     {% for post in posts %}
         <li>
@@ -20,6 +30,13 @@
                 <a href="posts/{{ post.slug }}.html">{{ post.meta.title }}</a>
                 {% if post.meta.subtitle %}
                     <p class="post-subtitle">{{ post.meta.subtitle }}</p>
+                {% endif %}
+                {% if post.tags %}
+                    <p class="post-tags">
+                        {% for tag in post.tags %}
+                            <a href="tags/{{ tag.slug }}.html" class="tag-chip">{{ tag.name }}</a>
+                        {% endfor %}
+                    </p>
                 {% endif %}
             </div>
             <span class="date">{{ post.meta.date_readable }}</span>

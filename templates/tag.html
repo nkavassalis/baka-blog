@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Posts tagged "{{ tag.name }}" - {{ config.website.title }}</title>
+    <link rel="alternate" type="application/rss+xml" title="{{ config.website.title }} RSS Feed" href="{{ path_prefix }}feed.xml">
+    <link rel="stylesheet" href="{{ path_prefix }}style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+<header>
+    <img src="{{ path_prefix }}images/logo.png" alt="{{ config.website.title }}" class="logo">
+    <p class="subtitle">{{ config.website.subtitle }}</p>
+</header>
+<main>
+    {% if tag_cloud %}
+    <nav class="tag-cloud" aria-label="Tags">
+        {% for t in tag_cloud %}
+            <a href="{{ path_prefix }}tags/{{ t.slug }}.html"
+               class="tag tag-level-{{ t.level }}{% if t.slug == tag.slug %} tag-active{% endif %}">
+                {{ t.name }}<span class="tag-count">{{ t.count }}</span>
+            </a>
+        {% endfor %}
+    </nav>
+    {% endif %}
+
+    <h2 class="tag-heading">Posts tagged &ldquo;{{ tag.name }}&rdquo;</h2>
+
+    <ul class="post-list">
+    {% for post in posts %}
+        <li>
+            <div class="post-info">
+                <a href="{{ path_prefix }}posts/{{ post.slug }}.html">{{ post.meta.title }}</a>
+                {% if post.meta.subtitle %}
+                    <p class="post-subtitle">{{ post.meta.subtitle }}</p>
+                {% endif %}
+                {% if post.tags %}
+                    <p class="post-tags">
+                        {% for t in post.tags %}
+                            <a href="{{ path_prefix }}tags/{{ t.slug }}.html" class="tag-chip">{{ t.name }}</a>
+                        {% endfor %}
+                    </p>
+                {% endif %}
+            </div>
+            <span class="date">{{ post.meta.date_readable }}</span>
+        </li>
+    {% endfor %}
+    </ul>
+
+    <p class="back-link"><a href="{{ path_prefix }}index.html">← Back to all posts</a></p>
+</main>
+<footer>{{ config.website.footer }}</footer>
+<footer><a href="https://github.com/nkavassalis/baka-blog">Powered by baka blog</a></footer>
+</body>
+</html>

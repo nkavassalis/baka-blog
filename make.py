@@ -1,6 +1,7 @@
 import math
 import hashlib
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -37,29 +38,104 @@ def save_hashes(hashes):
     with open(HASHES_PATH, 'w') as f:
         json.dump(hashes, f, indent=2)
 
+def slugify_tag(tag):
+    s = re.sub(r'[^a-z0-9]+', '-', tag.lower()).strip('-')
+    return s or 'tag'
+
+def parse_tags(meta_values):
+    if not meta_values:
+        return []
+    raw_parts = []
+    for value in meta_values:
+        raw_parts.extend(value.split(','))
+    seen = []
+    for part in raw_parts:
+        name = part.strip()
+        if name and name not in seen:
+            seen.append(name)
+    return seen
+
 def build_content():
     posts = []
     md = markdown.Markdown(extensions=['meta'])
     for md_file in CONTENT_DIR.glob("*.md"):
         html = md.convert(md_file.read_text())
-        metadata = {k: v[0] for k, v in md.Meta.items()}
+        metadata = {k: v[0] for k, v in md.Meta.items() if k != 'tags'}
+        tags = parse_tags(md.Meta.get('tags'))
         slug = md_file.stem
         date_obj = datetime.strptime(metadata['date'], "%Y-%m-%d")
         metadata['date_readable'] = date_obj.strftime("%B %d, %Y")
         posts.append({
             "content": html,
             "meta": metadata,
-            "slug": slug
+            "slug": slug,
+            "tags": [{"name": t, "slug": slugify_tag(t)} for t in tags],
         })
     return sorted(posts, key=lambda x: x['meta']['date'], reverse=True)
+
+def build_tag_index(posts):
+    index = {}
+    for post in posts:
+        if post['meta'].get('unlisted', '').lower() == 'true':
+            continue
+        for tag in post['tags']:
+            entry = index.setdefault(tag['slug'], {"name": tag['name'], "slug": tag['slug'], "posts": []})
+            entry['posts'].append(post)
+    return index
+
+def build_tag_cloud(tag_index, levels=5):
+    cloud = []
+    if not tag_index:
+        return cloud
+    counts = [len(t['posts']) for t in tag_index.values()]
+    max_count = max(counts)
+    min_count = min(counts)
+    span = max(max_count - min_count, 1)
+    for tag in sorted(tag_index.values(), key=lambda t: t['name'].lower()):
+        count = len(tag['posts'])
+        # Map count linearly into 1..levels.
+        level = 1 + int(round((count - min_count) / span * (levels - 1)))
+        cloud.append({
+            "name": tag['name'],
+            "slug": tag['slug'],
+            "count": count,
+            "level": level,
+        })
+    return cloud
+
+def compute_related_posts(post, tag_index, limit):
+    sections = []
+    for tag in post['tags']:
+        entry = tag_index.get(tag['slug'])
+        if not entry:
+            continue
+        related = [p for p in entry['posts'] if p['slug'] != post['slug']][:limit]
+        if related:
+            sections.append({"tag": tag, "posts": related})
+    return sections
+
+def compute_adjacent_posts(posts):
+    listed = [p for p in posts if p['meta'].get('unlisted', '').lower() != 'true']
+    nav = {}
+    for i, post in enumerate(listed):
+        nav[post['slug']] = {
+            "newer": listed[i - 1] if i > 0 else None,
+            "older": listed[i + 1] if i < len(listed) - 1 else None,
+        }
+    return nav
 
 def render_templates(posts, config):
     env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
     OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
     POSTS_PER_PAGE = config['website']['posts_per_page']
+    related_limit = config['website'].get('related_posts_per_tag', 5)
 
     listed_posts = [p for p in posts if p['meta'].get('unlisted', '').lower() != 'true']
-    total_pages = math.ceil(len(listed_posts) / POSTS_PER_PAGE)
+    total_pages = max(1, math.ceil(len(listed_posts) / POSTS_PER_PAGE))
+
+    tag_index = build_tag_index(posts)
+    tag_cloud = build_tag_cloud(tag_index)
+    adjacent = compute_adjacent_posts(posts)
 
     index_template = env.get_template("index.html")
     for page_num in range(1, total_pages + 1):
@@ -72,7 +148,23 @@ def render_templates(posts, config):
                 posts=paginated_posts,
                 config=config,
                 current_page=page_num,
-                total_pages=total_pages
+                total_pages=total_pages,
+                tag_cloud=tag_cloud,
+                path_prefix="",
+            )
+        )
+
+    tag_template = env.get_template("tag.html")
+    tags_dir = OUTPUT_DIR / "tags"
+    tags_dir.mkdir(exist_ok=True)
+    for tag in tag_index.values():
+        (tags_dir / f"{tag['slug']}.html").write_text(
+            tag_template.render(
+                tag=tag,
+                posts=tag['posts'],
+                config=config,
+                tag_cloud=tag_cloud,
+                path_prefix="../",
             )
         )
 
@@ -80,8 +172,17 @@ def render_templates(posts, config):
     posts_dir = OUTPUT_DIR / "posts"
     posts_dir.mkdir(exist_ok=True)
     for post in posts:
+        related = compute_related_posts(post, tag_index, related_limit)
+        nav = adjacent.get(post['slug'], {"newer": None, "older": None})
         post_file = posts_dir / f"{post['slug']}.html"
-        post_file.write_text(post_template.render(post=post, config=config))
+        post_file.write_text(post_template.render(
+            post=post,
+            config=config,
+            related_sections=related,
+            newer_post=nav['newer'],
+            older_post=nav['older'],
+            path_prefix="../",
+        ))
 
     not_found_template = env.get_template("404.html")
     (OUTPUT_DIR / "404.html").write_text(not_found_template.render(config=config))
@@ -211,8 +312,10 @@ def main():
     current_hashes = {
         "index_template": compute_hash(TEMPLATE_DIR / "index.html"),
         "post_template": compute_hash(TEMPLATE_DIR / "post.html"),
+        "tag_template": compute_hash(TEMPLATE_DIR / "tag.html"),
         "not_found_template": compute_hash(TEMPLATE_DIR / "404.html"),
         "style": compute_hash(Path("static/style.css")),
+        "config": compute_hash(Path(CONFIG_PATH)),
         **{str(p): compute_hash(p) for p in CONTENT_DIR.glob("*.md")},
         **{str(p): compute_hash(p) for p in IMAGE_DIR.glob("*.*")},
         **{str(p): compute_hash(p) for p in CONTENT_IMG_DIR.glob("*/*.*")}

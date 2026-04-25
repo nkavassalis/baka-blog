@@ -3,23 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <title>{{ post.meta.title }} - {{ config.website.title }}</title>
-    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="{{ path_prefix }}style.css">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
 <header>
-    <img src="../images/logo.png" alt="{{ config.website.title }}" class="logo">
+    <img src="{{ path_prefix }}images/logo.png" alt="{{ config.website.title }}" class="logo">
     <p class="subtitle">{{ config.website.subtitle }}</p>
 </header>
 <main>
-    <article class="content"> <a href="../index.html">← Back to all posts</a>
+    <article class="content"> <a href="{{ path_prefix }}index.html">← Back to all posts</a>
         <h1>{{ post.meta.title }}</h1>
-    <p class="date">{{ post.meta.date_readable }}</p>
-        {{ post.content | safe }}</article>
-    <a href="../index.html">← Back to all posts</a>
+        <p class="date">{{ post.meta.date_readable }}</p>
+        {% if post.tags %}
+            <p class="post-tags">
+                {% for tag in post.tags %}
+                    <a href="{{ path_prefix }}tags/{{ tag.slug }}.html" class="tag-chip">{{ tag.name }}</a>
+                {% endfor %}
+            </p>
+        {% endif %}
+        {{ post.content | safe }}
+    </article>
+
+    {% if newer_post or older_post %}
+    <nav class="post-nav" aria-label="Post navigation">
+        <div class="post-nav-prev">
+            {% if older_post %}
+                <a href="{{ path_prefix }}posts/{{ older_post.slug }}.html">
+                    <span class="post-nav-label">← Previous</span>
+                    <span class="post-nav-title">{{ older_post.meta.title }}</span>
+                </a>
+            {% endif %}
+        </div>
+        <div class="post-nav-next">
+            {% if newer_post %}
+                <a href="{{ path_prefix }}posts/{{ newer_post.slug }}.html">
+                    <span class="post-nav-label">Next →</span>
+                    <span class="post-nav-title">{{ newer_post.meta.title }}</span>
+                </a>
+            {% endif %}
+        </div>
+    </nav>
+    {% endif %}
+
+    {% for section in related_sections %}
+    <section class="related-posts">
+        <h3>Other posts about
+            <a href="{{ path_prefix }}tags/{{ section.tag.slug }}.html">{{ section.tag.name }}</a>
+        </h3>
+        <ul class="post-list">
+        {% for related in section.posts %}
+            <li>
+                <div class="post-info">
+                    <a href="{{ path_prefix }}posts/{{ related.slug }}.html">{{ related.meta.title }}</a>
+                    {% if related.meta.subtitle %}
+                        <p class="post-subtitle">{{ related.meta.subtitle }}</p>
+                    {% endif %}
+                </div>
+                <span class="date">{{ related.meta.date_readable }}</span>
+            </li>
+        {% endfor %}
+        </ul>
+    </section>
+    {% endfor %}
+
+    <a href="{{ path_prefix }}index.html">← Back to all posts</a>
 </main>
 <footer>{{ config.website.footer }}</footer>
 <footer><a href="https://github.com/nkavassalis/baka-blog">Powered by baka blog</a></footer>
 </body>
 </html>
-
