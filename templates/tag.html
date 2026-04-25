@@ -14,17 +14,13 @@
 </header>
 <main>
     {% if tag_cloud %}
-    <nav class="tag-cloud" aria-label="Tags">
-        {% for t in tag_cloud %}
-            <a href="{{ path_prefix }}tags/{{ t.slug }}.html"
-               class="tag tag-level-{{ t.level }}{% if t.slug == tag.slug %} tag-active{% endif %}">
-                {{ t.name }}<span class="tag-count">{{ t.count }}</span>
-            </a>
-        {% endfor %}
-    </nav>
+    <p class="tag-cloud" aria-label="Tags">
+        <span class="tag-cloud-label">Tags:</span>
+        {% for t in tag_cloud %}<a href="{{ path_prefix }}tags/{{ t.slug }}.html" class="tag{% if t.slug == tag.slug %} tag-active{% endif %}">{{ t.name }}<span class="tag-count">{{ t.count }}</span></a>{% if not loop.last %} {% endif %}{% endfor %}
+    </p>
     {% endif %}
 
-    <h2 class="tag-heading">Posts tagged &ldquo;{{ tag.name }}&rdquo;</h2>
+    <h2 class="section-heading">Posts tagged &ldquo;{{ tag.name }}&rdquo;</h2>
 
     <ul class="post-list">
     {% for post in posts %}

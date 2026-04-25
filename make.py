@@ -83,25 +83,11 @@ def build_tag_index(posts):
             entry['posts'].append(post)
     return index
 
-def build_tag_cloud(tag_index, levels=5):
-    cloud = []
-    if not tag_index:
-        return cloud
-    counts = [len(t['posts']) for t in tag_index.values()]
-    max_count = max(counts)
-    min_count = min(counts)
-    span = max(max_count - min_count, 1)
-    for tag in sorted(tag_index.values(), key=lambda t: t['name'].lower()):
-        count = len(tag['posts'])
-        # Map count linearly into 1..levels.
-        level = 1 + int(round((count - min_count) / span * (levels - 1)))
-        cloud.append({
-            "name": tag['name'],
-            "slug": tag['slug'],
-            "count": count,
-            "level": level,
-        })
-    return cloud
+def build_tag_cloud(tag_index):
+    return [
+        {"name": tag['name'], "slug": tag['slug'], "count": len(tag['posts'])}
+        for tag in sorted(tag_index.values(), key=lambda t: t['name'].lower())
+    ]
 
 def compute_related_posts(post, tag_index, limit):
     sections = []
