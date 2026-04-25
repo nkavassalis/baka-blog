@@ -11,7 +11,10 @@
     #main { flex: 1; display: flex; flex-direction: column; }
     #editor { flex: 1; }
     #actions { padding: 10px; background: #2d2d2d; }
-    #preview { flex: 1; overflow-y: auto; padding: 10px; background: #1a1a1a; border-top: 1px solid #333; }
+    #preview { flex: 1; overflow-y: auto; padding: 10px; background: #1a1a1a; border-top: 1px solid #333; min-height: 80px; }
+    #divider { flex: 0 0 6px; background: #444; cursor: row-resize; border-top: 1px solid #2a2a2a; border-bottom: 1px solid #2a2a2a; }
+    #divider:hover, #divider.dragging { background: #888; }
+    body.resizing-rows, body.resizing-rows * { cursor: row-resize !important; user-select: none; }
     #sidebar { width: 300px; flex: 0 0 300px; background: #2d2d2d; display: flex; flex-direction: column; }
     #postContainer { flex: 2; overflow-y: auto; padding: 10px; }
     #messages { flex: 1; overflow-y: auto; background: #111; color: #ddd; font-family: monospace; padding: 5px; border-top: 1px solid #333; }
@@ -53,6 +56,7 @@
       <button onclick="clearLogs()">Clear Logs</button>
       <button onclick="toggleImages()">Manage Images</button>
     </div>
+    <div id="divider" title="Drag to resize"></div>
     <div id="preview"></div>
     <div id="imagePanel"></div>
   </div>
@@ -68,6 +72,47 @@ const editor = new SimpleMDE({
   renderingConfig: { singleLineBreaks: false }
 })
 editor.codemirror.setOption("theme", "dracula")
+
+const EDITOR_HEIGHT_KEY = "bakaEditorHeight"
+const MIN_EDITOR_HEIGHT = 120
+function setEditorHeight(px) {
+  const max = Math.max(MIN_EDITOR_HEIGHT, window.innerHeight - 200)
+  const clamped = Math.max(MIN_EDITOR_HEIGHT, Math.min(max, px))
+  editor.codemirror.setSize(null, clamped + "px")
+  return clamped
+}
+const saved = parseInt(localStorage.getItem(EDITOR_HEIGHT_KEY) || "", 10)
+setEditorHeight(saved > 0 ? saved : 300)
+
+const divider = document.getElementById("divider")
+let resizeStartY = 0
+let resizeStartHeight = 0
+let resizing = false
+
+divider.addEventListener("mousedown", (e) => {
+  resizing = true
+  resizeStartY = e.clientY
+  resizeStartHeight = editor.codemirror.getWrapperElement().getBoundingClientRect().height
+  divider.classList.add("dragging")
+  document.body.classList.add("resizing-rows")
+  e.preventDefault()
+})
+document.addEventListener("mousemove", (e) => {
+  if (!resizing) return
+  setEditorHeight(resizeStartHeight + (e.clientY - resizeStartY))
+})
+document.addEventListener("mouseup", () => {
+  if (!resizing) return
+  resizing = false
+  divider.classList.remove("dragging")
+  document.body.classList.remove("resizing-rows")
+  const h = editor.codemirror.getWrapperElement().getBoundingClientRect().height
+  localStorage.setItem(EDITOR_HEIGHT_KEY, String(Math.round(h)))
+})
+window.addEventListener("resize", () => {
+  const h = editor.codemirror.getWrapperElement().getBoundingClientRect().height
+  setEditorHeight(h)
+})
 
 function isDirty() {
   return currentFile != null && editor.value() !== savedContent
