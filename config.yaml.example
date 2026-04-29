@@ -22,6 +22,9 @@ editor:
   port: 5000
 
 images:
-  max_width: 1280
-  max_height: 1280
+  # Editor cap: each uploaded image is downscaled so its width is at
+  # most max_width (aspect preserved, no height cap), saved as JPEG
+  # at jpeg_quality with EXIF orientation applied and a small
+  # unsharp mask after resize.
+  max_width: 3000
   jpeg_quality: 80
