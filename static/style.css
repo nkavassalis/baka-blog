@@ -122,6 +122,37 @@ main {
     color: var(--color-fg-alt-transparent);
 }
 
+.article-subtitle {
+    font-size: 0.9rem;
+    font-style: italic;
+    color: var(--color-fg-alt-transparent);
+    margin: 0.4rem 0 0;
+}
+
+.post-author {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.3rem 0;
+    font-size: 0.9rem;
+    color: var(--color-fg-alt-transparent);
+}
+
+.author-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.author-name {
+    color: var(--color-fg-alt);
+}
+
+.author-email {
+    color: var(--color-bg-accent);
+}
+
 article.content {
     font-size: 1.1rem;
     line-height: 1.8;

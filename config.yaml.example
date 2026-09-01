@@ -12,6 +12,11 @@ website:
   posts_per_page: 10
   related_posts_per_tag: 5
   base_url: https://baka.jp
+  # Author shown on every article page: name, mailto link, and avatar icon.
+  # author_avatar is the filename inside static/images (copied to dist/images).
+  author: "Nick Kavassalis"
+  author_email: "nick@baka.jp"
+  author_avatar: "avatar.jpg"
 
 aws:
   s3_bucket: "your-bucket-name"
