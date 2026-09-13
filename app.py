@@ -7,6 +7,8 @@ from PIL import Image, ImageFilter, ImageOps
 import uuid
 import os
 
+import make
+
 CONFIG_PATH = Path("config.yaml")
 
 if CONFIG_PATH.exists():
@@ -118,6 +120,8 @@ def api_save_post(filename):
 
 @app.route("/api/delete/<filename>", methods=["DELETE"])
 def api_delete_post(filename):
+    if filename != Path(filename).name or ".." in filename or not filename.endswith(".md"):
+        return jsonify({"error": "invalid filename"}), 400
     path = POSTS_DIR / filename
     if not path.exists():
         return jsonify({"error": "not found"}), 404
@@ -128,7 +132,12 @@ def api_delete_post(filename):
             f.unlink()
         img_folder.rmdir()
     path.unlink()
-    return jsonify({"status": "deleted"})
+    try:
+        make.delete_post_artifacts(slug)
+        remote_status = "deleted"
+    except Exception as e:
+        remote_status = f"remote cleanup failed: {e}"
+    return jsonify({"status": "deleted", "remote": remote_status})
 
 @app.route("/api/new", methods=["POST"])
 def api_new_post():
@@ -181,6 +190,23 @@ def api_regenerate():
     try:
         result = subprocess.run(
             ["python", "make.py"],
+            capture_output=True,
+            text=True,
+            check=False
+        )
+        return jsonify({
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "returncode": result.returncode
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/prune", methods=["POST"])
+def api_prune():
+    try:
+        result = subprocess.run(
+            ["python", "make.py", "prune", "--yes"],
             capture_output=True,
             text=True,
             check=False

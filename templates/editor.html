@@ -53,6 +53,7 @@
       <button onclick="savePost()">Save</button>
       <button onclick="deletePost()">Delete</button>
       <button onclick="regenerate()">Regenerate Site</button>
+      <button onclick="pruneImages()">Prune Images</button>
       <button onclick="clearLogs()">Clear Logs</button>
       <button onclick="toggleImages()">Manage Images</button>
     </div>
@@ -307,6 +308,17 @@ editor.codemirror.on("change", updatePreview)
 function regenerate() {
   logMessage("Regenerating site...", "status")
   fetch("/api/regenerate", { method: "POST" })
+    .then(r => r.json()).then(res => {
+      if (res.stdout) logMessage("STDOUT:\n" + res.stdout, "stdout")
+      if (res.stderr) logMessage("STDERR:\n" + res.stderr, "stderr")
+      logMessage("Done (exit code " + res.returncode + ")", "status")
+    }).catch(err => logMessage("Error: " + err, "stderr"))
+}
+
+function pruneImages() {
+  if (!confirm("Find images not referenced by any post and delete them locally AND from the remote bucket. This cannot be undone. Continue?")) return
+  logMessage("Pruning unused images...", "status")
+  fetch("/api/prune", { method: "POST" })
     .then(r => r.json()).then(res => {
       if (res.stdout) logMessage("STDOUT:\n" + res.stdout, "stdout")
       if (res.stderr) logMessage("STDERR:\n" + res.stderr, "stderr")

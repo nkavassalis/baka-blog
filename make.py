@@ -2,6 +2,7 @@ import math
 import hashlib
 import json
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -254,6 +255,95 @@ def setup_hosting(config):
     ], check=True)
     print("CloudFront distribution updated. Propagation may take several minutes.")
 
+def find_orphan_images():
+    """Return image files in content/images/<slug>/ not referenced by any post markdown."""
+    referenced = set()
+    for md_file in CONTENT_DIR.glob("*.md"):
+        text = md_file.read_text(encoding="utf-8")
+        referenced.update(re.findall(r"[A-Za-z0-9._-]+\.(?:jpe?g|png|gif|webp|svg)", text, re.IGNORECASE))
+    return sorted(
+        p for p in CONTENT_IMG_DIR.glob("*/*.*")
+        if p.is_file() and p.name not in referenced
+    )
+
+def _aws_rm(url, extra_args=None):
+    cmd = ["aws", "s3", "rm", url, "--only-show-errors"] + (extra_args or [])
+    result = subprocess.run(cmd, check=False)
+    if result.returncode != 0:
+        print(f"  warning: remote delete failed for {url} (exit {result.returncode})")
+    return result.returncode
+
+def _invalidate(dist_id, paths):
+    if not dist_id or not paths:
+        return
+    print(f"Invalidating CloudFront: {' '.join(paths)}")
+    subprocess.run(
+        ["aws", "cloudfront", "create-invalidation",
+         "--distribution-id", dist_id, "--paths", *paths],
+        check=False,
+    )
+
+def prune_images(assume_yes=False):
+    """Delete images not used by any post, locally and from the remote bucket."""
+    config = load_config()
+    bucket = config["aws"]["s3_bucket"]
+    dist_id = config["aws"].get("cloudfront_dist_id")
+
+    orphans = find_orphan_images()
+    if not orphans:
+        print("Nothing to prune; every image is referenced by a post.")
+        return
+
+    print(f"Found {len(orphans)} image(s) not referenced by any post:")
+    for p in orphans:
+        print(f"  - {p.parent.name}/{p.name}")
+
+    if not assume_yes:
+        answer = input("Delete these locally AND from the remote bucket? [y/N] ").strip().lower()
+        if answer != "y":
+            print("Aborted.")
+            return
+
+    invalidation_paths = []
+    for p in orphans:
+        slug, name = p.parent.name, p.name
+        _aws_rm(f"s3://{bucket}/images/{slug}/{name}")
+        p.unlink(missing_ok=True)
+        (OUTPUT_DIR / "images" / slug / name).unlink(missing_ok=True)
+        invalidation_paths.append(f"/images/{slug}/{name}")
+        print(f"Pruned {slug}/{name}")
+
+    for folder in CONTENT_IMG_DIR.glob("*"):
+        if folder.is_dir() and not any(folder.iterdir()):
+            folder.rmdir()
+
+    _invalidate(dist_id, invalidation_paths)
+    print("Prune complete.")
+
+def delete_post_artifacts(slug):
+    """Delete a removed post's remote objects (post page + its image folder) and dist copies."""
+    if not slug or slug in (".", "..") or not re.fullmatch(r"[A-Za-z0-9._-]+", slug):
+        raise ValueError(f"invalid slug: {slug!r}")
+
+    config = load_config()
+    bucket = config["aws"]["s3_bucket"]
+    dist_id = config["aws"].get("cloudfront_dist_id")
+
+    print(f"Removing s3://{bucket}/posts/{slug}.html ...")
+    _aws_rm(f"s3://{bucket}/posts/{slug}.html")
+
+    print(f"Removing s3://{bucket}/images/{slug}/ ...")
+    _aws_rm(f"s3://{bucket}/images/{slug}/", extra_args=["--recursive"])
+
+    # Remove dist copies so a later sync cannot resurrect anything.
+    (OUTPUT_DIR / "posts" / f"{slug}.html").unlink(missing_ok=True)
+    dist_images = OUTPUT_DIR / "images" / slug
+    if dist_images.is_dir():
+        shutil.rmtree(dist_images)
+
+    _invalidate(dist_id, [f"/posts/{slug}.html", f"/images/{slug}/*"])
+    print(f"Remote cleanup done for post '{slug}'.")
+
 def sync_s3_and_invalidate(config):
     bucket = config['aws']['s3_bucket']
     dist_id = config['aws']['cloudfront_dist_id']
@@ -318,8 +408,11 @@ def main():
         print("No changes detected; skipping build.")
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1 and sys.argv[1] == "setup":
+    args = sys.argv[1:]
+    if args and args[0] == "setup":
         setup_hosting(load_config())
+    elif args and args[0] == "prune":
+        prune_images(assume_yes="--yes" in args[1:])
     else:
         main()
 
