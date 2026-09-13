@@ -13,22 +13,27 @@
 </header>
 <main>
     <article class="content"> <a href="{{ path_prefix }}index.html">← Back to all posts</a>
-        <h1>{{ post.meta.title }}</h1>
-        {% if post.meta.subtitle %}
-            <p class="article-subtitle">{{ post.meta.subtitle }}</p>
-        {% endif %}
-        <p class="date">{{ post.meta.date_readable }}</p>
-        {% if config.website.author %}
-            <div class="post-author">
-                {% if config.website.author_avatar %}
-                    <img src="{{ path_prefix }}images/{{ config.website.author_avatar }}" class="author-avatar" alt="{{ config.website.author }}">
+        <div class="post-header">
+            <div class="post-headline">
+                <h1>{{ post.meta.title }}</h1>
+                {% if post.meta.subtitle %}
+                    <p class="article-subtitle">{{ post.meta.subtitle }}</p>
                 {% endif %}
-                <span class="author-name">{{ config.website.author }}</span>
-                {% if config.website.author_email %}
-                    <a href="mailto:{{ config.website.author_email }}" class="author-email">{{ config.website.author_email }}</a>
-                {% endif %}
+                <p class="date">{{ post.meta.date_readable }}</p>
             </div>
-        {% endif %}
+            {% if config.website.author %}
+                <div class="post-author">
+                    {% if config.website.author_avatar %}
+                        <img src="{{ path_prefix }}images/{{ config.website.author_avatar }}" class="author-avatar" alt="{{ config.website.author }}">
+                    {% endif %}
+                    {% if config.website.author_email %}
+                        <a href="mailto:{{ config.website.author_email }}" class="author-name">{{ config.website.author }}</a>
+                    {% else %}
+                        <span class="author-name">{{ config.website.author }}</span>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
         {% if post.tags %}
             <p class="post-tags">
                 {% for tag in post.tags %}
