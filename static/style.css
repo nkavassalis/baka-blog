@@ -18,19 +18,32 @@
     --image-bg: url('images/background.jpg');
     --font-body: "Clear Sans", sans-serif;
     --font-header: "Clear Sans", sans-serif;
-    --bg-attach: fixed;
     --bg-repeat: no-repeat;
     --bg-size: cover;
 }
 
-html, body {
+html {
     margin: 0;
     padding: 0;
     background-color: var(--color-bg-page);
+}
+
+body {
+    margin: 0;
+    padding: 0;
     color: var(--color-fg-main);
     font-family: var(--font-body);
+}
+
+/* Fixed background as a real fixed-position layer.
+   Safari on macOS does not composite `background-attachment: fixed`
+   properly and it jitters/jiggles while scrolling. */
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
     background-image: var(--image-bg);
-    background-attachment: var(--bg-attach);
     background-repeat: var(--bg-repeat);
     background-size: var(--bg-size);
     background-position: center;
