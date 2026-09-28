@@ -1,0 +1,9 @@
+{# Shared pinned-tags nav (website.pinned_tags in config.yaml).
+   Included from every template's <header>; path_prefix / current_tag_slug come from the
+   including template's context, with defaults so root-level pages work too. #}
+{% if pinned_tags %}
+    {% set prefix = path_prefix if path_prefix is defined and path_prefix else '' %}
+    <p class="tag-nav" aria-label="Topics">
+        {% for tag in pinned_tags %}<a href="{{ prefix }}tags/{{ tag.slug }}.html" class="tag-nav-link{% if tag.slug == current_tag_slug %} tag-nav-active{% endif %}">{{ tag.name }}</a>{% if not loop.last %} <span class="tag-nav-sep">|</span> {% endif %}{% endfor %}
+    </p>
+{% endif %}

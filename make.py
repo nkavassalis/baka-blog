@@ -74,7 +74,22 @@ def build_content():
         })
     return sorted(posts, key=lambda x: x['meta']['date'], reverse=True)
 
-def build_tag_index(posts):
+def pinned_tag_names(config):
+    """Tag names listed in website.pinned_tags, in config order (nav is static)."""
+    values = (config.get('website') or {}).get('pinned_tags') or []
+    if isinstance(values, str):
+        values = re.split(r'[,|]', values)
+    names, seen = [], set()
+    for value in values:
+        name = str(value).strip()
+        slug = slugify_tag(name)
+        if not name or slug in seen:
+            continue
+        seen.add(slug)
+        names.append(name)
+    return names
+
+def build_tag_index(posts, config=None):
     index = {}
     for post in posts:
         if post['meta'].get('unlisted', '').lower() == 'true':
@@ -82,13 +97,26 @@ def build_tag_index(posts):
         for tag in post['tags']:
             entry = index.setdefault(tag['slug'], {"name": tag['name'], "slug": tag['slug'], "posts": []})
             entry['posts'].append(post)
+    # Pinned tags always get a page, even while empty, so the nav never 404s.
+    for name in pinned_tag_names(config):
+        index.setdefault(slugify_tag(name), {"name": name, "slug": slugify_tag(name), "posts": []})
     return index
 
 def build_tag_cloud(tag_index):
     return [
         {"name": tag['name'], "slug": tag['slug'], "count": len(tag['posts'])}
         for tag in sorted(tag_index.values(), key=lambda t: t['name'].lower())
+        if tag['posts']
     ]
+
+def build_pinned_tag_nav(config, tag_index):
+    """Top-of-page tag nav: config order, empty tags included, no counts."""
+    nav = []
+    for name in pinned_tag_names(config):
+        slug = slugify_tag(name)
+        entry = tag_index.get(slug)
+        nav.append({"name": entry['name'] if entry else name, "slug": slug})
+    return nav
 
 def compute_related_posts(post, tag_index, limit):
     sections = []
@@ -120,8 +148,9 @@ def render_templates(posts, config):
     listed_posts = [p for p in posts if p['meta'].get('unlisted', '').lower() != 'true']
     total_pages = max(1, math.ceil(len(listed_posts) / POSTS_PER_PAGE))
 
-    tag_index = build_tag_index(posts)
+    tag_index = build_tag_index(posts, config)
     tag_cloud = build_tag_cloud(tag_index)
+    pinned_tags = build_pinned_tag_nav(config, tag_index)
     adjacent = compute_adjacent_posts(posts)
 
     index_template = env.get_template("index.html")
@@ -137,6 +166,8 @@ def render_templates(posts, config):
                 current_page=page_num,
                 total_pages=total_pages,
                 tag_cloud=tag_cloud,
+                pinned_tags=pinned_tags,
+                current_tag_slug=None,
                 path_prefix="",
             )
         )
@@ -151,6 +182,8 @@ def render_templates(posts, config):
                 posts=tag['posts'],
                 config=config,
                 tag_cloud=tag_cloud,
+                pinned_tags=pinned_tags,
+                current_tag_slug=tag['slug'],
                 path_prefix="../",
             )
         )
@@ -168,11 +201,15 @@ def render_templates(posts, config):
             related_sections=related,
             newer_post=nav['newer'],
             older_post=nav['older'],
+            pinned_tags=pinned_tags,
+            current_tag_slug=None,
             path_prefix="../",
         ))
 
     not_found_template = env.get_template("404.html")
-    (OUTPUT_DIR / "404.html").write_text(not_found_template.render(config=config))
+    (OUTPUT_DIR / "404.html").write_text(not_found_template.render(
+        config=config, pinned_tags=pinned_tags, current_tag_slug=None,
+    ))
 
     generate_rss_feed(posts, OUTPUT_DIR, config)
 
@@ -390,6 +427,7 @@ def main():
         "post_template": compute_hash(TEMPLATE_DIR / "post.html"),
         "tag_template": compute_hash(TEMPLATE_DIR / "tag.html"),
         "not_found_template": compute_hash(TEMPLATE_DIR / "404.html"),
+        "tagnav_template": compute_hash(TEMPLATE_DIR / "tagnav.html"),
         "style": compute_hash(Path("static/style.css")),
         "config": compute_hash(Path(CONFIG_PATH)),
         **{str(p): compute_hash(p) for p in CONTENT_DIR.glob("*.md")},
