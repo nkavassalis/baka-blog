@@ -58,7 +58,7 @@ def parse_tags(meta_values):
 
 def build_content():
     posts = []
-    md = markdown.Markdown(extensions=['meta'])
+    md = markdown.Markdown(extensions=['meta', 'tables'])
     for md_file in CONTENT_DIR.glob("*.md"):
         html = md.convert(md_file.read_text())
         metadata = {k: v[0] for k, v in md.Meta.items() if k != 'tags'}

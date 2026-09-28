@@ -197,6 +197,23 @@ article.content img {
     margin: 1rem 0;
 }
 
+table {
+    border-collapse: collapse;
+    margin: 1.5rem auto;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+th, td {
+    border: 1px solid var(--color-bg-accent-transparent);
+    padding: 0.4rem 0.8rem;
+    text-align: left;
+}
+
+th {
+    background-color: var(--color-bg-code);
+}
+
 blockquote {
     margin: 1rem;
     padding: 0.5rem 1rem;
