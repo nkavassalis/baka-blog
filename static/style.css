@@ -59,7 +59,7 @@ a:hover {
 }
 
 header {
-    padding: 2rem;
+    padding: 2rem 2rem 1rem;
     text-align: center;
     border-bottom: 1px solid var(--color-border-header);
     background-color: var(--color-bg-alt-transparent);
@@ -90,7 +90,7 @@ h1 {
     font-size: 1.05rem;
     color: var(--color-fg-alt-transparent);
     max-width: 400px;
-    margin: 0.5rem auto 1rem;
+    margin: 0.5rem auto 0;
 }
 
 .tag-nav-link {
@@ -112,7 +112,7 @@ h1 {
 
 main {
     max-width: 800px;
-    margin: 3rem auto;
+    margin: 1.5rem auto;
     padding: 1rem;
     background-color: var(--color-bg-main-transparent);
     border-radius: 5px;
