@@ -2,4 +2,4 @@ flask
 jinja2
 markdown
 pyyaml
-PIL
+pillow
