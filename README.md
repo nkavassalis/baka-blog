@@ -45,6 +45,21 @@ Do not expose the editor to the internet. Deleting files using the editor will n
 
 ---
 
+## LLM-friendly files
+
+Every build publishes (set `website.llms_txt: false` to opt out of the llms files):
+
+- **`/llms.txt`** — a [llms.txt](https://llmstxt.org) markdown index of every listed post (title,
+  URL, date, tags) so assistants like ChatGPT/Gemini can discover and fetch your posts.
+- **`/llms-full.txt`** — the full post archive as plain Markdown (front matter stripped, unlisted
+  posts excluded), for LLMs that prefer one fetch.
+- **`/robots.txt`** — always written, open by default (`User-agent: * / Allow: /`) with a comment
+  welcoming AI retrieval bots. Nothing is blocked, so training opt-outs (e.g. `Google-Extended`
+  disallow) are intentionally absent — add them by hand only if you change your mind; crawling for
+  search/RAG still works via `*`.
+
+---
+
 ## Pinned tags
 
 `website.pinned_tags` in `config.yaml` turns any set of tags into a static nav bar under the site

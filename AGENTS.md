@@ -109,8 +109,9 @@ tag lists under `.tag-cloud` / `.tag-nav`, lists under `.post-list`.
 Anything new goes in `config.yaml.example` **and** the README, and should be read defensively
 (`config['website'].get('key', default)`) so an older `config.yaml` still builds. Existing keys:
 `website.{title,description,base_url,subtitle,footer,posts_per_page,related_posts_per_tag,author,
-author_email,author_avatar,pinned_tags}`, `aws.{s3_bucket,cloudfront_dist_id}`,
-`editor.{host,port}`, `images.{max_width,jpeg_quality}`.
+author_email,author_avatar,pinned_tags,llms_txt}`, `aws.{s3_bucket,cloudfront_dist_id}`,
+`editor.{host,port}`, `images.{max_width,jpeg_quality}`. `llms_txt` (default true) toggles
+`dist/llms.txt` + `dist/llms-full.txt`; `render_templates` also always writes an open `dist/robots.txt`.
 
 ## Editor (`app.py`)
 

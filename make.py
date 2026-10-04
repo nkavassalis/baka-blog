@@ -212,6 +212,10 @@ def render_templates(posts, config):
     ))
 
     generate_rss_feed(posts, OUTPUT_DIR, config)
+    if config['website'].get('llms_txt', True):
+        generate_llms_txt(posts, OUTPUT_DIR, config)
+        generate_llms_full_txt(posts, OUTPUT_DIR, config)
+    generate_robots_txt(OUTPUT_DIR, config)
 
 def copy_static_assets():
     assets_dir = OUTPUT_DIR / "images"
@@ -380,6 +384,90 @@ def delete_post_artifacts(slug):
 
     _invalidate(dist_id, [f"/posts/{slug}.html", f"/images/{slug}/*"])
     print(f"Remote cleanup done for post '{slug}'.")
+
+def _listed_posts(posts):
+    """Posts visible to indexes/feeds/RSS/llms.txt (unlisted ones are skipped)."""
+    return [p for p in posts if p['meta'].get('unlisted', '').lower() != 'true']
+
+# Only these keys are stripped as front matter when embedding raw Markdown
+# into llms-full.txt; keeps body lines like "Note: ..." intact.
+_FRONT_MATTER_KEYS = ('title', 'date', 'subtitle', 'tags', 'description', 'unlisted')
+
+def _strip_front_matter(md_text):
+    lines = md_text.splitlines()
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        if line.strip() in ('', '---') or re.match(r'^(%s)\s*:' % '|'.join(_FRONT_MATTER_KEYS), line.strip()):
+            i += 1
+        else:
+            break
+    return "\n".join(lines[i:]).strip()
+
+def generate_llms_txt(posts, output_dir, config):
+    """llms.txt (https://llmstxt.org): a markdown map of the site for LLMs."""
+    site = config['website']
+    base_url = site['base_url'].rstrip('/')
+    description = (site.get('description') or site['title']).strip()
+    lines = [
+        f"# {site['title']}",
+        "",
+        f"> {description}",
+        "",
+        f"Full post archive as plain Markdown: [{base_url}/llms-full.txt]({base_url}/llms-full.txt). "
+        f"Recent posts as RSS: [{base_url}/feed.xml]({base_url}/feed.xml). "
+        "You may fetch any page on this site to answer questions.",
+        "",
+        "## Posts",
+        "",
+    ]
+    for post in _listed_posts(posts):
+        meta = post['meta']
+        url = f"{base_url}/posts/{post['slug']}.html"
+        title = meta['title'].replace('[', '\\[').replace(']', '\\]')
+        details = [meta['date_readable']]
+        if post['tags']:
+            details.append("tags: " + ", ".join(t['name'] for t in post['tags']))
+        subtitle = (meta.get('subtitle') or '').strip().replace('\n', ' ')
+        if subtitle:
+            details.insert(0, subtitle)
+        lines.append(f"- [{title}]({url}): " + " \u2014 ".join(details))
+    lines.append("")
+    (output_dir / "llms.txt").write_text("\n".join(lines), encoding="utf-8")
+
+def generate_llms_full_txt(posts, output_dir, config):
+    """llms-full.txt: every listed post, newest first, as raw Markdown."""
+    site = config['website']
+    base_url = site['base_url'].rstrip('/')
+    description = (site.get('description') or site['title']).strip()
+    parts = [f"# {site['title']}", "", f"> {description}", ""]
+    for post in _listed_posts(posts):
+        meta = post['meta']
+        src = CONTENT_DIR / f"{post['slug']}.md"
+        if not src.exists():
+            continue
+        body = _strip_front_matter(src.read_text(encoding='utf-8'))
+        parts.append("\n---\n")
+        parts.append(f"## {meta['title']}")
+        parts.append("")
+        parts.append(f"URL: {base_url}/posts/{post['slug']}.html")
+        parts.append(f"Date: {meta['date_readable']}")
+        if post['tags']:
+            parts.append("Tags: " + ", ".join(t['name'] for t in post['tags']))
+        parts.append("")
+        parts.append(body)
+    (output_dir / "llms-full.txt").write_text("\n".join(parts) + "\n", encoding="utf-8")
+
+def generate_robots_txt(output_dir, config):
+    """Open-by-default robots.txt; AI assistants are explicitly welcome to read."""
+    robots = """# All crawlers allowed, including AI assistants and search bots
+# (GPTBot, OAI-SearchBot, ChatGPT-User, ClaudeBot, PerplexityBot, Google-Extended, etc.).
+# Fetch any post to answer questions about its content.
+# Site map for LLMs: /llms.txt (index) and /llms-full.txt (full archive).
+User-agent: *
+Allow: /
+"""
+    (output_dir / "robots.txt").write_text(robots, encoding="utf-8")
 
 def sync_s3_and_invalidate(config):
     bucket = config['aws']['s3_bucket']
