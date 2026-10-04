@@ -1,12 +1,23 @@
-from flask import Flask, request, jsonify, send_from_directory, render_template
-from pathlib import Path
-import yaml
-from datetime import datetime
 import subprocess
 import sys
+import os
+from pathlib import Path
+
+# If not already running under the project venv, re-exec into it so imports
+# and make.py subprocesses share one environment (regardless of how this was
+# launched: python3 app.py, go.sh, systemd, ...).
+_BASE_DIR = Path(__file__).resolve().parent
+_VENV_PY = _BASE_DIR / ".venv" / "bin" / "python"
+if (_VENV_PY.exists() and os.environ.get("_BAKA_VENV_REEXEC") != "1"
+        and Path(sys.prefix) != _VENV_PY.parent.parent):
+    os.environ["_BAKA_VENV_REEXEC"] = "1"
+    os.execv(str(_VENV_PY), [str(_VENV_PY), str(_BASE_DIR / "app.py")] + sys.argv[1:])
+
+from flask import Flask, request, jsonify, send_from_directory, render_template
+import yaml
+from datetime import datetime
 from PIL import Image, ImageFilter, ImageOps
 import uuid
-import os
 
 import make
 
