@@ -3,6 +3,7 @@ from pathlib import Path
 import yaml
 from datetime import datetime
 import subprocess
+import sys
 from PIL import Image, ImageFilter, ImageOps
 import uuid
 import os
@@ -189,7 +190,7 @@ def api_delete_image(slug, filename):
 def api_regenerate():
     try:
         result = subprocess.run(
-            ["python", "make.py"],
+            [sys.executable, "make.py"],
             capture_output=True,
             text=True,
             check=False
@@ -206,7 +207,7 @@ def api_regenerate():
 def api_prune():
     try:
         result = subprocess.run(
-            ["python", "make.py", "prune", "--yes"],
+            [sys.executable, "make.py", "prune", "--yes"],
             capture_output=True,
             text=True,
             check=False
