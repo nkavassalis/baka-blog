@@ -10,6 +10,7 @@ small, dependency-light, no build framework, no client-side JS except the 404 pa
 |---|---|
 | `make.py` | the whole generator: parse posts → build tag indexes → render templates → copy assets → deploy |
 | `app.py` | local Flask editor (`python app.py`), talks to `make.py` for regenerate/prune |
+| `setup.sh` | one-time env bootstrap: creates `.venv/`, installs `requirements.txt`, seeds `config.yaml` |
 | `templates/` | `index.html`, `post.html`, `tag.html`, `404.html`, plus the shared `tagnav.html` partial |
 | `static/style.css` | single stylesheet; copied verbatim to `dist/style.css` |
 | `static/images/` | site chrome (logo, background, author avatar) |
@@ -21,14 +22,19 @@ small, dependency-light, no build framework, no client-side JS except the 404 pa
 
 ## Commands
 
+Every target in the Makefile runs `.venv/bin/python` (created by `./setup.sh`), so system Python
+never needs the dependencies. If `.venv/bin/python` is missing, make fails with a pointer to
+`./setup.sh`. To use a different interpreter: `make PYTHON=/path/to/python`.
+
 | Command | What it does |
 |---|---|
-| `make` / `python3 make.py` | build **and deploy** to S3 + invalidate all of CloudFront |
+| `./setup.sh` | create `.venv/`, install requirements, seed `config.yaml` from the example (safe to re-run) |
+| `make` / `.venv/bin/python make.py` | build **and deploy** to S3 + invalidate all of CloudFront |
 | `make all` | clear caches, rebuild, redeploy |
 | `make clean` | delete the build caches (`.file_hashes.json`, plus a legacy `.slug_uuid_mapping.json`) so the next build is unconditional |
 | `make setup` | one-time S3 website + CloudFront 403/404 → `/404.html` wiring (idempotent) |
-| `make prune` | delete images no post references — **locally and in the bucket** (prompts; `python3 make.py prune --yes` to skip the prompt) |
-| `python app.py` | editor UI on `editor.host:editor.port` from config |
+| `make prune` | delete images no post references — **locally and in the bucket** (prompts; `.venv/bin/python make.py prune --yes` to skip the prompt) |
+| `source .venv/bin/activate && python app.py` | editor UI on `editor.host:editor.port` from config |
 
 `make.py` skips the whole build when nothing's hash changed, so re-running it is cheap — but when
 something *has* changed it deploys to production, not to a preview.
@@ -39,7 +45,7 @@ Render locally only (`render_templates` just writes files under `dist/`):
 
 ```bash
 cp config.yaml.example config.yaml   # first time only; make.py refuses to run without a config
-python3 -c "
+.venv/bin/python -c "
 import make, pathlib
 cfg = make.load_config()
 posts = make.build_content()
@@ -116,7 +122,7 @@ button forwards to `make.py prune --yes`.
 
 ## Conventions / gotchas
 
-- `config.yaml`, `dist/`, `.file_hashes.json`, `__pycache__/` are git-ignored. `config.yaml` holds real
+- `config.yaml`, `dist/`, `.venv/`, `.file_hashes.json`, `__pycache__/` are git-ignored. `config.yaml` holds real
   bucket + distribution IDs — never commit it, never paste it into a PR.
 - Post deletion goes through the editor: `app.py` calls `make.delete_post_artifacts(slug)`, which removes
   `posts/<slug>.html` and `images/<slug>/` from the bucket, from `dist/`, and invalidates those paths.

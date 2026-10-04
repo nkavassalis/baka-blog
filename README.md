@@ -5,10 +5,13 @@ A simple markdown to static site generator blog, with a locally hosted editor. S
 ## Setup
 
 ```bash
-pip install -r requirements.txt
+./setup.sh
 ```
 
-Setup a config.yaml in the root directory based on the config.yaml.example
+Creates `.venv/`, installs `requirements.txt` into it, and copies `config.yaml.example` to
+`config.yaml` if you don't have one yet (edit it next — `make.py` refuses to run without a config).
+Every `make` target then runs through `.venv/bin/python` automatically; no activation needed.
+Run `./setup.sh` again any time requirements change (it recreates the venv cleanly).
 
 ```bash
 make
@@ -31,6 +34,7 @@ make setup
 one-time hosting configuration: points the S3 bucket's website index/error documents at `index.html` / `404.html`, and adds CloudFront custom error responses mapping both 403 and 404 to `/404.html`. Idempotent — safe to re-run; it only triggers a CloudFront update when the rules have drifted.
 
 ```bash
+source .venv/bin/activate
 python app.py
 ```
 to launch the post editor service
