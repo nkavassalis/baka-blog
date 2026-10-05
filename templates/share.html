@@ -1,0 +1,15 @@
+{# Social/search preview metadata. All values are pre-escaped in make.py. #}
+    <meta name="description" content="{{ share.description }}">
+    <link rel="canonical" href="{{ share.url }}">
+    <meta property="og:type" content="{{ share.type }}">
+    <meta property="og:site_name" content="{{ share.site }}">
+    <meta property="og:title" content="{{ share.title }}">
+    <meta property="og:description" content="{{ share.description }}">
+    <meta property="og:image" content="{{ share.image }}">
+    <meta property="og:url" content="{{ share.url }}">
+    {% if share.published %}<meta property="article:published_time" content="{{ share.published }}">
+    {% endif %}{% for tag in share.tags %}<meta property="article:tag" content="{{ tag }}">
+    {% endfor %}<meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ share.title }}">
+    <meta name="twitter:description" content="{{ share.description }}">
+    <meta name="twitter:image" content="{{ share.image }}">

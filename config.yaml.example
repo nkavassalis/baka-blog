@@ -14,6 +14,9 @@ website:
   # assistants (ChatGPT, Gemini, ...) can browse and quote your posts. Default true.
   # Set false to skip the llms files; robots.txt is always written (open by default).
   llms_txt: true
+  # Image used for social preview cards (og:image) when a post has no image of its own.
+  # Path relative to the site root; posts with images automatically use their first image.
+  share_image: "images/logo.png"
   related_posts_per_tag: 5
   # Optional: tags pinned as a nav bar at the top of every page, in this order.
   # Names must match tags used in posts (case/punctuation-insensitive).

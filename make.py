@@ -139,6 +139,66 @@ def compute_adjacent_posts(posts):
         }
     return nav
 
+def _attr(text):
+    """HTML-escape including double quotes, safe for meta content="..."."""
+    return escape(str(text), {'"': "&quot;", "'": "&#39;"})
+
+def extract_plain_text(raw, limit=300):
+    """Strip tags/entities from HTML (or plain text) and truncate on a word bound."""
+    text = re.sub(r'<[^>]+>', ' ', raw or '')
+    text = re.sub(r'&[^\s;]{1,8};', ' ', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    if len(text) > limit:
+        text = text[:limit].rsplit(' ', 1)[0].rstrip(' \u2014.,;:') + '\u2026'
+    return text
+
+def first_post_image(post, base_url, fallback):
+    """Absolute URL of the post's first content image (SVGs can't be OG images)."""
+    m = re.search(r'<img\b[^>]*?\bsrc="([^"]+)"', post['content'])
+    if not m:
+        return fallback
+    src = m.group(1)
+    if src.lower().endswith('.svg'):
+        return fallback
+    if src.startswith('http://') or src.startswith('https://'):
+        return src
+    rel = src[3:] if src.startswith('../') else src
+    return f"{base_url}/{rel.lstrip('/')}"
+
+def build_share_meta(posts, config):
+    """Attach post['share'] and return site-level share contexts for social previews."""
+    site = config['website']
+    base = site['base_url'].rstrip('/')
+    site_image = f"{base}/" + site.get('share_image', 'images/logo.png').lstrip('/')
+    site_title = _attr(site['title'])
+    site_desc = _attr(extract_plain_text(site.get('description') or site['title']))
+    for post in posts:
+        meta = post['meta']
+        desc = meta.get('description') or meta.get('subtitle') \
+            or extract_plain_text(post['content'])
+        post['share'] = {
+            'type': 'article', 'site': site_title,
+            'title': _attr(meta['title']),
+            'description': _attr(extract_plain_text(desc)),
+            'image': first_post_image(post, base, site_image),
+            'url': f"{base}/posts/{post['slug']}.html",
+            'published': meta['date'],
+            'tags': [_attr(t['name']) for t in post['tags']],
+        }
+    def site_share(title, url, description=None):
+        return {'type': 'website', 'site': site_title, 'title': title, 'image': site_image,
+                'url': url, 'description': description or site_desc,
+                'published': None, 'tags': []}
+    return {
+        'base': base,
+        'index': site_share(site_title, base + '/'),
+        'not_found': site_share(_attr('Page not found'), f"{base}/404.html"),
+        'tag': lambda tag: site_share(
+            f"{_attr(tag['name'])} - {site_title}",
+            f"{base}/tags/{tag['slug']}.html",
+            _attr(f"{len(tag['posts'])} post(s) tagged '{tag['name']}' on {site['title']}")),
+    }
+
 def render_templates(posts, config):
     env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
     OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
@@ -152,6 +212,7 @@ def render_templates(posts, config):
     tag_cloud = build_tag_cloud(tag_index)
     pinned_tags = build_pinned_tag_nav(config, tag_index)
     adjacent = compute_adjacent_posts(posts)
+    share_ctx = build_share_meta(posts, config)
 
     index_template = env.get_template("index.html")
     for page_num in range(1, total_pages + 1):
@@ -169,6 +230,7 @@ def render_templates(posts, config):
                 pinned_tags=pinned_tags,
                 current_tag_slug=None,
                 path_prefix="",
+                share=dict(share_ctx['index'], url=f"{share_ctx['base']}/{page_filename}") if page_filename != "index.html" else share_ctx['index'],
             )
         )
 
@@ -185,6 +247,7 @@ def render_templates(posts, config):
                 pinned_tags=pinned_tags,
                 current_tag_slug=tag['slug'],
                 path_prefix="../",
+                share=share_ctx['tag'](tag),
             )
         )
 
@@ -204,11 +267,13 @@ def render_templates(posts, config):
             pinned_tags=pinned_tags,
             current_tag_slug=None,
             path_prefix="../",
+            share=post['share'],
         ))
 
     not_found_template = env.get_template("404.html")
     (OUTPUT_DIR / "404.html").write_text(not_found_template.render(
         config=config, pinned_tags=pinned_tags, current_tag_slug=None,
+        share=share_ctx['not_found'],
     ))
 
     generate_rss_feed(posts, OUTPUT_DIR, config)
@@ -516,6 +581,7 @@ def main():
         "tag_template": compute_hash(TEMPLATE_DIR / "tag.html"),
         "not_found_template": compute_hash(TEMPLATE_DIR / "404.html"),
         "tagnav_template": compute_hash(TEMPLATE_DIR / "tagnav.html"),
+        "share_template": compute_hash(TEMPLATE_DIR / "share.html"),
         "style": compute_hash(Path("static/style.css")),
         "config": compute_hash(Path(CONFIG_PATH)),
         **{str(p): compute_hash(p) for p in CONTENT_DIR.glob("*.md")},

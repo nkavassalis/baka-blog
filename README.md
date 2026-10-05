@@ -60,6 +60,17 @@ Every build publishes (set `website.llms_txt: false` to opt out of the llms file
 
 ---
 
+## Social preview cards
+
+Every public page ships Open Graph + Twitter card metadata (`templates/share.html`) plus a canonical
+URL and meta description. Post pages use the post's **first content image** as `og:image` (external
+image URLs work too, SVGs are skipped); with no image — and on the index/tag/404 pages — they fall
+back to `website.share_image` (default `images/logo.png`). Descriptions come from the post's
+`description:` front matter, else `subtitle:`, else the first ~300 characters of the post text. Add
+`description:` front matter to a post when you want to control its card text.
+
+---
+
 ## Pinned tags
 
 `website.pinned_tags` in `config.yaml` turns any set of tags into a static nav bar under the site

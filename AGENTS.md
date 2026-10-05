@@ -96,6 +96,9 @@ in `subtitle`/`footer`).
   `{{ path_prefix }}`, or it breaks one of the two levels.
 - `templates/tagnav.html` is included by every page template and reads `pinned_tags`,
   `current_tag_slug` and `path_prefix` from the including context — pass those when you add a template.
+- `templates/share.html` is included in the `<head>` of every public page (index, post, tag, 404) and
+  reads a pre-escaped `share` dict built by `build_share_meta` (Open Graph/Twitter/canonical/description).
+  Posts use their first content image as `og:image`, falling back to `website.share_image`.
 - `404.html` is rendered with just `config` + the tag-nav variables.
 
 ## Styles
@@ -109,7 +112,7 @@ tag lists under `.tag-cloud` / `.tag-nav`, lists under `.post-list`.
 Anything new goes in `config.yaml.example` **and** the README, and should be read defensively
 (`config['website'].get('key', default)`) so an older `config.yaml` still builds. Existing keys:
 `website.{title,description,base_url,subtitle,footer,posts_per_page,related_posts_per_tag,author,
-author_email,author_avatar,pinned_tags,llms_txt}`, `aws.{s3_bucket,cloudfront_dist_id}`,
+author_email,author_avatar,pinned_tags,llms_txt,share_image}`, `aws.{s3_bucket,cloudfront_dist_id}`,
 `editor.{host,port}`, `images.{max_width,jpeg_quality}`. `llms_txt` (default true) toggles
 `dist/llms.txt` + `dist/llms-full.txt`; `render_templates` also always writes an open `dist/robots.txt`.
 
