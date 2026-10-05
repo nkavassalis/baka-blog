@@ -283,12 +283,31 @@ def render_templates(posts, config):
     generate_robots_txt(OUTPUT_DIR, config)
     generate_sitemap_txt(posts, OUTPUT_DIR, config)
 
+def write_favicon():
+    """Build dist/favicon.ico (16/32/48px) from the site logo, if Pillow allows."""
+    logo = IMAGE_DIR / "logo.png"
+    if not logo.exists():
+        return
+    try:
+        from PIL import Image
+        img = Image.open(logo).convert("RGBA")
+        w, h = img.size
+        if w != h:  # ICO frames must be square; center on transparent canvas
+            side = max(w, h)
+            canvas = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+            canvas.paste(img, ((side - w) // 2, (side - h) // 2), img)
+            img = canvas
+        img.save(OUTPUT_DIR / "favicon.ico", format="ICO", sizes=[(16, 16), (32, 32), (48, 48)])
+    except Exception as e:
+        print(f"favicon skipped: {e}")
+
 def copy_static_assets():
     assets_dir = OUTPUT_DIR / "images"
     assets_dir.mkdir(exist_ok=True, parents=True)
     for image in IMAGE_DIR.glob("*.*"):
         (assets_dir / image.name).write_bytes(image.read_bytes())
     (OUTPUT_DIR / "style.css").write_text((Path("static/style.css")).read_text())
+    write_favicon()
 
 def copy_content_images():
     output_images_dir = OUTPUT_DIR / "images"
