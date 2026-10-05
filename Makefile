@@ -3,6 +3,8 @@
 #   make PYTHON=$(shell command -v python3)
 PYTHON ?= .venv/bin/python
 
+.DEFAULT_GOAL := default
+
 .PHONY: all clean default setup prune
 
 # Guard: fail with a helpful message when the venv interpreter is missing.
