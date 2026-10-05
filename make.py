@@ -281,6 +281,7 @@ def render_templates(posts, config):
         generate_llms_txt(posts, OUTPUT_DIR, config)
         generate_llms_full_txt(posts, OUTPUT_DIR, config)
     generate_robots_txt(OUTPUT_DIR, config)
+    generate_sitemap_txt(posts, OUTPUT_DIR, config)
 
 def copy_static_assets():
     assets_dir = OUTPUT_DIR / "images"
@@ -523,14 +524,38 @@ def generate_llms_full_txt(posts, output_dir, config):
         parts.append(body)
     (output_dir / "llms-full.txt").write_text("\n".join(parts) + "\n", encoding="utf-8")
 
+def generate_sitemap_txt(posts, output_dir, config):
+    """sitemap.xml for listed posts, tag pages, and the paginated index."""
+    base_url = config['website']['base_url'].rstrip('/')
+    urls = [f"\n  <url><loc>{base_url}/</loc></url>"]
+    total_pages = max(1, math.ceil(
+        len(_listed_posts(posts)) / config['website'].get('posts_per_page', 10)))
+    for page in range(2, total_pages + 1):
+        urls.append(f"\n  <url><loc>{base_url}/page{page}.html</loc></url>")
+    for post in _listed_posts(posts):
+        urls.append(
+            f"\n  <url><loc>{base_url}/posts/{post['slug']}.html</loc>"
+            f"<lastmod>{post['meta']['date']}</lastmod></url>")
+    for tag in build_tag_index(posts, config).values():
+        if tag['posts']:
+            urls.append(f"\n  <url><loc>{base_url}/tags/{tag['slug']}.html</loc></url>")
+    sitemap = (f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{''.join(urls)}
+</urlset>
+""")
+    (output_dir / "sitemap.xml").write_text(sitemap, encoding="utf-8")
+
 def generate_robots_txt(output_dir, config):
     """Open-by-default robots.txt; AI assistants are explicitly welcome to read."""
-    robots = """# All crawlers allowed, including AI assistants and search bots
+    base_url = config['website']['base_url'].rstrip('/')
+    robots = f"""# All crawlers allowed, including AI assistants and search bots
 # (GPTBot, OAI-SearchBot, ChatGPT-User, ClaudeBot, PerplexityBot, Google-Extended, etc.).
 # Fetch any post to answer questions about its content.
 # Site map for LLMs: /llms.txt (index) and /llms-full.txt (full archive).
 User-agent: *
 Allow: /
+
+Sitemap: {base_url}/sitemap.xml
 """
     (output_dir / "robots.txt").write_text(robots, encoding="utf-8")
 

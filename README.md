@@ -54,9 +54,11 @@ Every build publishes (set `website.llms_txt: false` to opt out of the llms file
 - **`/llms-full.txt`** — the full post archive as plain Markdown (front matter stripped, unlisted
   posts excluded), for LLMs that prefer one fetch.
 - **`/robots.txt`** — always written, open by default (`User-agent: * / Allow: /`) with a comment
-  welcoming AI retrieval bots. Nothing is blocked, so training opt-outs (e.g. `Google-Extended`
-  disallow) are intentionally absent — add them by hand only if you change your mind; crawling for
-  search/RAG still works via `*`.
+  welcoming AI retrieval bots and a `Sitemap:` pointer. Nothing is blocked, so training opt-outs
+  (e.g. `Google-Extended` disallow) are intentionally absent — add them by hand only if you change
+  your mind; crawling for search/RAG still works via `*`.
+- **`/sitemap.xml`** — always written: index (+ pagination), every listed post with `lastmod`, and
+  every non-empty tag page. Unlisted posts never appear.
 
 ---
 
