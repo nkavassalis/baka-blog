@@ -47,7 +47,7 @@
     <textarea id="editor"></textarea>
     <div id="actions">
       <input type="file" id="imageUpload" class="inline">
-      <input type="checkbox" id="insertAtEnd" class="inline" checked>
+      <input type="checkbox" id="insertAtEnd" class="inline">
       <label for="insertAtEnd">Insert images at end</label>
       <br>
       <button onclick="savePost()">Save</button>
@@ -183,16 +183,26 @@ function loadPost(filename, slug) {
 }
 
 function savePost() {
-  if (!currentFile) { logMessage("No post loaded.", "stderr"); return }
-  const content = editor.value()
-  fetch("/api/post/" + currentFile, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ content })
-  }).then(() => {
-    savedContent = content
-    logMessage("Saved " + currentFile, "status")
-    loadPosts()
+  savePostAsync()
+}
+
+function savePostAsync() {
+  return new Promise(resolve => {
+    if (!currentFile) { logMessage("No post loaded.", "stderr"); resolve(); return }
+    const content = editor.value()
+    fetch("/api/post/" + currentFile, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content })
+    }).then(() => {
+      savedContent = content
+      logMessage("Saved " + currentFile, "status")
+      loadPosts()
+      resolve()
+    }).catch(err => {
+      logMessage("Save failed: " + err, "stderr")
+      resolve()
+    })
   })
 }
 
@@ -307,12 +317,19 @@ editor.codemirror.on("change", updatePreview)
 
 function regenerate() {
   logMessage("Regenerating site...", "status")
-  fetch("/api/regenerate", { method: "POST" })
+  const run = () => fetch("/api/regenerate", { method: "POST" })
     .then(r => r.json()).then(res => {
+      if (res.error) logMessage("Error: " + res.error, "stderr")
       if (res.stdout) logMessage("STDOUT:\n" + res.stdout, "stdout")
       if (res.stderr) logMessage("STDERR:\n" + res.stderr, "stderr")
       logMessage("Done (exit code " + res.returncode + ")", "status")
     }).catch(err => logMessage("Error: " + err, "stderr"))
+  if (isDirty()) {
+    logMessage("Saving current post first...", "status")
+    savePostAsync().then(run)
+  } else {
+    run()
+  }
 }
 
 function pruneImages() {
