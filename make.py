@@ -57,15 +57,9 @@ def parse_tags(meta_values):
     return seen
 
 def display_date(date_obj):
-    """Compact list/article date: relative for the last 30 days, else MM/DD/YYYY.
-    Frozen at build time (static site), which is fine for post dates."""
-    days = (datetime.now().date() - date_obj.date()).days
-    if days <= 0:
-        return "today"
-    if days == 1:
-        return "yesterday"
-    if days < 30:
-        return f"{days} days ago"
+    """Absolute compact date for the page; relative forms ("3 days ago") are
+    applied client-side by static/dates.js, which leaves this text untouched
+    when JS is unavailable. Safe by construction: absolute = fallback."""
     return date_obj.strftime("%m/%d/%Y")
 
 def build_content():
@@ -320,6 +314,7 @@ def copy_static_assets():
     for image in IMAGE_DIR.glob("*.*"):
         (assets_dir / image.name).write_bytes(image.read_bytes())
     (OUTPUT_DIR / "style.css").write_text((Path("static/style.css")).read_text())
+    (OUTPUT_DIR / "dates.js").write_text((Path("static/dates.js")).read_text())
     write_favicon()
 
 def copy_content_images():
@@ -640,6 +635,7 @@ def main():
         "tagnav_template": compute_hash(TEMPLATE_DIR / "tagnav.html"),
         "share_template": compute_hash(TEMPLATE_DIR / "share.html"),
         "style": compute_hash(Path("static/style.css")),
+        "dates_js": compute_hash(Path("static/dates.js")),
         "config": compute_hash(Path(CONFIG_PATH)),
         **{str(p): compute_hash(p) for p in CONTENT_DIR.glob("*.md")},
         **{str(p): compute_hash(p) for p in IMAGE_DIR.glob("*.*")},

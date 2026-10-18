@@ -2,7 +2,8 @@
 
 A tiny Markdown → static-site blog: ~450 lines of Python, five Jinja templates, one stylesheet,
 deployed as static files to S3 + CloudFront, with an optional local Flask editor. Keep it that way:
-small, dependency-light, no build framework, no client-side JS except the 404 page's canvas.
+small, dependency-light, no build framework, no client-side JS except the 404 page's canvas and the
+~15-line `static/dates.js` (relative post dates; absolute dates are server-rendered as the fallback).
 
 ## Layout
 

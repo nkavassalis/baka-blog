@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="{{ path_prefix }}style.css">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 {% include "share.html" %}
+    <script src="{{ path_prefix }}dates.js" defer></script>
 </head>
 <body>
 <header>
@@ -28,7 +29,7 @@
                     <p class="post-subtitle">{{ post.meta.subtitle }}</p>
                 {% endif %}
             </div>
-            <span class="date">{{ post.meta.date_display }}</span>
+            <span class="date" data-date="{{ post.meta.date }}">{{ post.meta.date_display }}</span>
         </li>
     {% endfor %}
     </ul>

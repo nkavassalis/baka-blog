@@ -6,6 +6,7 @@
     <link rel="stylesheet" href="{{ path_prefix }}style.css">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 {% include "share.html" %}
+    <script src="{{ path_prefix }}dates.js" defer></script>
 </head>
 <body>
 <header>
@@ -21,7 +22,7 @@
                 {% if post.meta.subtitle %}
                     <p class="article-subtitle">{{ post.meta.subtitle }}</p>
                 {% endif %}
-                <p class="date">{{ post.meta.date_display }}</p>
+                <p class="date" data-date="{{ post.meta.date }}">{{ post.meta.date_display }}</p>
             </div>
             {% if config.website.author %}
                 <div class="post-author">
@@ -81,7 +82,7 @@
                         <p class="post-subtitle">{{ related.meta.subtitle }}</p>
                     {% endif %}
                 </div>
-                <span class="date">{{ related.meta.date_display }}</span>
+                <span class="date" data-date="{{ related.meta.date }}">{{ related.meta.date_display }}</span>
             </li>
         {% endfor %}
         </ul>
