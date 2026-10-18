@@ -73,6 +73,17 @@ back to `website.share_image` (default `images/logo.png`). Descriptions come fro
 
 ---
 
+## Post dates & tag chips
+
+List/article dates render server-side as absolute **MM/DD/YYYY** — that markup *is* the fallback. A
+~15-line `static/dates.js` (loaded with `defer` on index/tag/post pages) upgrades `[data-date]`
+elements to "today" / "yesterday" / "N days ago" for posts under 30 days old and adds the ISO date
+as a tooltip; with JS off, crawlers, or any error, the absolute date simply stays. The index list
+also shows up to two tag chips per post plus a `+N` overflow pill (tooltip lists the rest); tag
+pages themselves don't repeat chips.
+
+---
+
 ## Pinned tags
 
 `website.pinned_tags` in `config.yaml` turns any set of tags into a static nav bar under the site

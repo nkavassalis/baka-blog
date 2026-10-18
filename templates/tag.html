@@ -29,7 +29,13 @@
                     <p class="post-subtitle">{{ post.meta.subtitle }}</p>
                 {% endif %}
             </div>
+            <div class="post-meta">
             <span class="date" data-date="{{ post.meta.date }}">{{ post.meta.date_display }}</span>
+            {% set other_tags = post.tags | rejectattr('slug', 'equalto', current_tag_slug) | list %}
+            {% if other_tags %}
+            <span class="list-tags">{% for t in other_tags[:2] %}<a class="tag-chip" href="{{ path_prefix }}tags/{{ t.slug }}.html">{{ t.name }}</a>{% endfor %}</span>
+            {% endif %}
+            </div>
         </li>
     {% endfor %}
     </ul>
