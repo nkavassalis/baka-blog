@@ -148,6 +148,67 @@ main {
     margin: 0.2rem 0;
 }
 
+/* Right-hand meta column on the index post list: date + compact tag chips */
+.post-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.3rem;
+    margin-left: 1rem;
+    flex-shrink: 0;
+    max-width: 40%;
+}
+
+.list-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    justify-content: flex-end;
+}
+
+.tag-chip {
+    font-size: 0.72rem !important;
+    line-height: 1.4;
+    padding: 0.05rem 0.55rem;
+    border-radius: 999px;
+    background: var(--color-bg-alt);
+    color: var(--color-fg-main) !important;
+    border: 1px solid var(--color-border-main);
+    max-width: 8.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-decoration: none;
+}
+
+.tag-chip:hover {
+    background: var(--color-bg-accent);
+    color: var(--color-bg-page) !important;
+}
+
+.tag-more {
+    cursor: default;
+    color: var(--color-fg-alt-transparent) !important;
+}
+
+@media (max-width: 600px) {
+    .post-list li {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .post-meta {
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        max-width: 100%;
+        margin: 0.35rem 0 0;
+    }
+    .list-tags {
+        justify-content: flex-start;
+    }
+}
+
 .post-info {
     display: flex;
     flex-direction: column;

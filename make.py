@@ -56,6 +56,18 @@ def parse_tags(meta_values):
             seen.append(name)
     return seen
 
+def display_date(date_obj):
+    """Compact list/article date: relative for the last 30 days, else MM/DD/YYYY.
+    Frozen at build time (static site), which is fine for post dates."""
+    days = (datetime.now().date() - date_obj.date()).days
+    if days <= 0:
+        return "today"
+    if days == 1:
+        return "yesterday"
+    if days < 30:
+        return f"{days} days ago"
+    return date_obj.strftime("%m/%d/%Y")
+
 def build_content():
     posts = []
     md = markdown.Markdown(extensions=['meta', 'tables'])
@@ -66,6 +78,7 @@ def build_content():
         slug = md_file.stem
         date_obj = datetime.strptime(metadata['date'], "%Y-%m-%d")
         metadata['date_readable'] = date_obj.strftime("%B %d, %Y")
+        metadata['date_display'] = display_date(date_obj)
         posts.append({
             "content": html,
             "meta": metadata,

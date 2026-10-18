@@ -21,7 +21,7 @@
                 {% if post.meta.subtitle %}
                     <p class="article-subtitle">{{ post.meta.subtitle }}</p>
                 {% endif %}
-                <p class="date">{{ post.meta.date_readable }}</p>
+                <p class="date">{{ post.meta.date_display }}</p>
             </div>
             {% if config.website.author %}
                 <div class="post-author">
@@ -81,7 +81,7 @@
                         <p class="post-subtitle">{{ related.meta.subtitle }}</p>
                     {% endif %}
                 </div>
-                <span class="date">{{ related.meta.date_readable }}</span>
+                <span class="date">{{ related.meta.date_display }}</span>
             </li>
         {% endfor %}
         </ul>

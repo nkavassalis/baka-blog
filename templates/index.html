@@ -26,7 +26,12 @@
                     <p class="post-subtitle">{{ post.meta.subtitle }}</p>
                 {% endif %}
             </div>
-            <span class="date">{{ post.meta.date_readable }}</span>
+            <div class="post-meta">
+            <span class="date">{{ post.meta.date_display }}</span>
+            {% if post.tags %}
+            <span class="list-tags">{% for t in post.tags[:2] %}<a class="tag-chip" href="{{ path_prefix }}tags/{{ t.slug }}.html">{{ t.name }}</a>{% endfor %}{% if post.tags|length > 2 %}<span class="tag-chip tag-more" title="{{ post.tags|join(', ', attribute='name') }}">+{{ post.tags|length - 2 }}</span>{% endif %}</span>
+            {% endif %}
+            </div>
         </li>
     {% endfor %}
     </ul>
