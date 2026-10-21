@@ -162,6 +162,7 @@ def api_new_post():
 title: {title}
 subtitle: Write your description here.
 date: {today}
+tags:
 unlisted: false
 ---
 

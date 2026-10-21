@@ -81,20 +81,26 @@ def build_content():
         })
     return sorted(posts, key=lambda x: x['meta']['date'], reverse=True)
 
-def pinned_tag_names(config):
-    """Tag names listed in website.pinned_tags, in config order (nav is static)."""
+def pinned_tag_entries(config):
+    """Pinned nav entries in config order: plain strings, or {name, slug} maps
+    so a display label can link to a differently-named tag page
+    (e.g. name: 'cto musings', slug: cto)."""
     values = (config.get('website') or {}).get('pinned_tags') or []
     if isinstance(values, str):
         values = re.split(r'[,|]', values)
-    names, seen = [], set()
+    entries, seen = [], set()
     for value in values:
-        name = str(value).strip()
-        slug = slugify_tag(name)
-        if not name or slug in seen:
+        if isinstance(value, dict):
+            name = str(value.get('name', '')).strip()
+            slug = slugify_tag(str(value.get('slug') or name))
+        else:
+            name = str(value).strip()
+            slug = slugify_tag(name)
+        if not name or not slug or slug in seen:
             continue
         seen.add(slug)
-        names.append(name)
-    return names
+        entries.append({"name": name, "slug": slug})
+    return entries
 
 def build_tag_index(posts, config=None):
     index = {}
@@ -105,8 +111,8 @@ def build_tag_index(posts, config=None):
             entry = index.setdefault(tag['slug'], {"name": tag['name'], "slug": tag['slug'], "posts": []})
             entry['posts'].append(post)
     # Pinned tags always get a page, even while empty, so the nav never 404s.
-    for name in pinned_tag_names(config):
-        index.setdefault(slugify_tag(name), {"name": name, "slug": slugify_tag(name), "posts": []})
+    for entry in pinned_tag_entries(config):
+        index.setdefault(entry['slug'], {"name": entry['name'], "slug": entry['slug'], "posts": []})
     return index
 
 def build_tag_cloud(tag_index):
@@ -119,10 +125,9 @@ def build_tag_cloud(tag_index):
 def build_pinned_tag_nav(config, tag_index):
     """Top-of-page tag nav: config order, empty tags included, no counts."""
     nav = []
-    for name in pinned_tag_names(config):
-        slug = slugify_tag(name)
-        entry = tag_index.get(slug)
-        nav.append({"name": entry['name'] if entry else name, "slug": slug})
+    for entry in pinned_tag_entries(config):
+        tag = tag_index.get(entry['slug'])
+        nav.append({"name": tag['name'] if tag else entry['name'], "slug": entry['slug']})
     return nav
 
 def compute_related_posts(post, tag_index, limit):

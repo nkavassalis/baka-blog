@@ -21,8 +21,12 @@ website:
   # Optional: tags pinned as a nav bar at the top of every page, in this order.
   # Names must match tags used in posts (case/punctuation-insensitive).
   # A pinned tag with no posts yet still gets a tags/<slug>.html page.
+  # An entry may also be a {name, slug} map to display one label while
+  # linking to a different tag page (here "cto musings" -> tags/cto.html).
   pinned_tags:
-    - technology
+    - name: cto musings
+      slug: cto
+    - tinkering
     - photography
     - games
     - other

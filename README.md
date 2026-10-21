@@ -100,6 +100,14 @@ website:
 
 - Links point at `tags/<slug>.html`, with the slug generated the same way as every other tag
   (lowercased, non-alphanumerics collapsed to `-`), so names can be written in any case or spacing.
+- An entry can be a map to decouple the nav label from the tag page it links to:
+
+```yaml
+website:
+  pinned_tags:
+    - name: cto musings
+      slug: cto        # links to tags/cto.html
+```
 - The bar is rendered exactly in the order you list it, and only with the tags you list — it is not
   alphabetical and does not grow on its own, unlike the tag cloud at the bottom of the index page,
   which is derived from the posts themselves.
