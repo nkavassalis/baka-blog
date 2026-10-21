@@ -123,12 +123,11 @@ def build_tag_cloud(tag_index):
     ]
 
 def build_pinned_tag_nav(config, tag_index):
-    """Top-of-page tag nav: config order, empty tags included, no counts."""
-    nav = []
-    for entry in pinned_tag_entries(config):
-        tag = tag_index.get(entry['slug'])
-        nav.append({"name": tag['name'] if tag else entry['name'], "slug": entry['slug']})
-    return nav
+    """Top-of-page tag nav: config order, empty tags included, no counts.
+    The config's label always wins (map entries exist precisely to rename
+    a tag in the nav); tag_index only guarantees the page exists."""
+    return [{"name": entry['name'], "slug": entry['slug']}
+            for entry in pinned_tag_entries(config)]
 
 def compute_related_posts(post, tag_index, limit):
     sections = []
