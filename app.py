@@ -1,3 +1,4 @@
+import re
 import subprocess
 import sys
 import os
@@ -57,17 +58,35 @@ def normalize_upload(file_stream):
         img = img.filter(ImageFilter.UnsharpMask(radius=1.0, percent=80, threshold=2))
     return img
 
+def _parse_front_matter(content):
+    """Front matter as dict. YAML first; on failure (e.g. unquoted 'colon: '
+    in a value, which Python-Markdown's meta parser tolerates but YAML does
+    not), fall back to splitting each line on its first colon so the editor
+    list agrees with the build."""
+    if not content.startswith("---"):
+        return {}
+    try:
+        _, meta_block, _ = content.split("---", 2)
+    except ValueError:
+        return {}
+    try:
+        metadata = yaml.safe_load(meta_block)
+        if isinstance(metadata, dict):
+            return metadata
+    except Exception:
+        pass
+    metadata = {}
+    for line in meta_block.splitlines():
+        if ":" in line and not line.startswith((" ", "\t", "#")):
+            key, value = line.split(":", 1)
+            metadata[key.strip()] = value.strip()
+    return metadata
+
 def list_posts():
     posts = []
     for f in POSTS_DIR.glob("*.md"):
         content = f.read_text(encoding="utf-8")
-        metadata = {}
-        if content.startswith("---"):
-            try:
-                _, meta_block, _ = content.split("---", 2)
-                metadata = yaml.safe_load(meta_block)
-            except Exception:
-                pass
+        metadata = _parse_front_matter(content)
         date_str = metadata.get("date", "")
         try:
             date_obj = datetime.strptime(str(date_str).strip(), "%Y-%m-%d")
@@ -155,7 +174,9 @@ def api_delete_post(filename):
 def api_new_post():
     data = request.json
     title = data.get("title", "Untitled Post")
-    slug = title.lower().replace(" ", "-")
+    slug = re.sub(r"-+", "-", re.sub(r"[^a-z0-9. -]", "", title.lower())).strip("- ").replace(" ", "-")
+    if not slug:
+        slug = "untitled-post"
     filename = f"{slug}.md"
     today = datetime.now().strftime("%Y-%m-%d")
     template = f"""---
